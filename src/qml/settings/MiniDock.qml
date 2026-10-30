@@ -372,6 +372,19 @@ Item {
             property real cornerRadius: background.radius
             fragmentShader: "qrc:/qml/shaders/acrylic_overlay.frag.qsb"
         }
+
+        // Liquid-glass specular overlay for the Tinted glass effect
+        // (see main.qml); bezel scales with the miniature.
+        ShaderEffect {
+            anchors.fill: parent
+            visible: dock.backgroundStyle === 2 && dock.tintedBlur
+            property real resX: width
+            property real resY: height
+            property real cornerRadius: background.radius
+            property real bezelWidth: Math.max(2.0, 10.0 * dock.unit)
+            property real intensity: 1.0
+            fragmentShader: "qrc:/qml/shaders/glass_highlight.frag.qsb"
+        }
     }
 
     // --- Icons ---

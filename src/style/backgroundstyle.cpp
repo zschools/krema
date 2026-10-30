@@ -36,11 +36,17 @@ void applyBackgroundToWindow(QWindow *window, BackgroundStyleType type, const QR
 
     case BackgroundStyleType::Tinted:
         // Frosted glass (opt-in): blur + contrast behind the tint color,
-        // exactly like PanelInherit, so the tinted panel shows a blurred
-        // backdrop through its opacity instead of a flat color.
+        // so the tinted panel shows a blurred backdrop through its opacity
+        // instead of a flat color. Unlike PanelInherit's neutral (1, 1, 1),
+        // the contrast is tuned liquid-glass style: saturation is raised
+        // (the CSS reference uses saturate(1.2)) so backdrop colors stay
+        // vivid through the frost, with a touch of contrast to keep the
+        // frosted layer defined. The matching specular rim is drawn in QML
+        // (glass_highlight.frag); true refraction is beyond what KWin's
+        // client-side blur API can express.
         if (tintedBlur && KWindowEffects::isEffectAvailable(KWindowEffects::BlurBehind)) {
             KWindowEffects::enableBlurBehind(window, true, region);
-            KWindowEffects::enableBackgroundContrast(window, true, 1.0, 1.0, 1.0, region);
+            KWindowEffects::enableBackgroundContrast(window, true, 1.05, 1.0, 1.25, region);
         }
         break;
 

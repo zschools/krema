@@ -1167,6 +1167,22 @@ Item {
                 property real cornerRadius: dockBackground.radius
                 fragmentShader: "qrc:/qml/shaders/acrylic_overlay.frag.qsb"
             }
+
+            // Liquid-glass specular overlay for the Tinted glass effect:
+            // rim light + edge line + sheen over the blurred, saturation-
+            // boosted backdrop (backgroundstyle.cpp). SDF-masked like the
+            // acrylic overlay. Refraction itself is compositor-only on
+            // Wayland, so this reproduces the specular half of the look.
+            ShaderEffect {
+                anchors.fill: parent
+                visible: DockView.backgroundStyleType === 2 && DockSettings.tintedBlur
+                property real resX: width
+                property real resY: height
+                property real cornerRadius: dockBackground.radius
+                property real bezelWidth: 10.0
+                property real intensity: 1.0
+                fragmentShader: "qrc:/qml/shaders/glass_highlight.frag.qsb"
+            }
         }
 
         // Delay enabling animations until after initial layout to avoid startup flicker
