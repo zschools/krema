@@ -169,15 +169,29 @@ SettingsPage {
             onToggled: DockSettings.tintedBlur = checked
         }
 
+        // Specular strength of the glass effect (rim light and sheen drawn
+        // by glass_highlight.frag). A live shader uniform, so dragging this
+        // updates the dock immediately; greyed out while the effect is off.
+        SliderDelegate {
+            visible: DockSettings.backgroundStyle === 2
+            enabled: DockSettings.tintedBlur
+            text: i18n("Glass intensity")
+            from: 0; to: 200; stepSize: 5
+            value: Math.round(DockSettings.tintedGlassIntensity * 100)
+            valueText: i18nc("@label percentage", "%1%", value)
+            onMoved: (value) => DockSettings.tintedGlassIntensity = value / 100
+        }
+
         FormCard.FormDelegateSeparator {
             visible: DockSettings.backgroundStyle === 2  // Tinted
         }
 
-        // Opacity (hidden for Transparent only)
+        // Opacity (hidden for Transparent only). Half-percent steps keep
+        // fine adjustments possible without losing the snap.
         SliderDelegate {
             text: i18n("Opacity")
-            from: 0; to: 100; stepSize: 5
-            value: Math.round(DockSettings.backgroundOpacity * 100)
+            from: 0; to: 100; stepSize: 0.5
+            value: Math.round(DockSettings.backgroundOpacity * 200) / 2
             valueText: i18nc("@label percentage", "%1%", value)
             onMoved: (value) => DockSettings.backgroundOpacity = value / 100
         }

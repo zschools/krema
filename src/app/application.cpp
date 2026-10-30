@@ -95,6 +95,7 @@ void Application::connectSettingsAutoSave(KremaSettings *settings, QObject *cont
     connect(settings, &KremaSettings::BackgroundStyleChanged, context, saveSettings);
     connect(settings, &KremaSettings::TintColorChanged, context, saveSettings);
     connect(settings, &KremaSettings::TintedBlurChanged, context, saveSettings);
+    connect(settings, &KremaSettings::TintedGlassIntensityChanged, context, saveSettings);
     connect(settings, &KremaSettings::UseCustomIndicatorColorsChanged, context, saveSettings);
     connect(settings, &KremaSettings::IndicatorActiveColorChanged, context, saveSettings);
     connect(settings, &KremaSettings::IndicatorInactiveColorChanged, context, saveSettings);

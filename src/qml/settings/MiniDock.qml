@@ -51,6 +51,7 @@ Item {
     property int panelPaddingBottom: DockSettings.panelPaddingBottom
     property int panelPaddingLeft: DockSettings.panelPaddingLeft
     property bool tintedBlur: DockSettings.tintedBlur
+    property real tintedGlassIntensity: DockSettings.tintedGlassIntensity
     property bool useCustomIndicatorColors: DockSettings.useCustomIndicatorColors
     property color indicatorActiveColor: DockSettings.indicatorActiveColor
     property color indicatorInactiveColor: DockSettings.indicatorInactiveColor
@@ -382,7 +383,7 @@ Item {
             property real resY: height
             property real cornerRadius: background.radius
             property real bezelWidth: Math.max(2.0, 10.0 * dock.unit)
-            property real intensity: 1.0
+            property real intensity: dock.tintedGlassIntensity
             fragmentShader: "qrc:/qml/shaders/glass_highlight.frag.qsb"
         }
     }

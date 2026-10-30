@@ -233,6 +233,13 @@
       <default>false</default>
     </entry>
 
+    <entry name="TintedGlassIntensity" type="Double">
+      <label>Strength of the Tinted glass specular highlight (rim light and sheen)</label>
+      <default>1.0</default>
+      <min>0.0</min>
+      <max>2.0</max>
+    </entry>
+
     <entry name="UseCustomIndicatorColors" type="Bool">
       <label>Use custom colors for the running indicator dots instead of the theme color</label>
       <default>false</default>

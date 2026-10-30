@@ -1180,7 +1180,7 @@ Item {
                 property real resY: height
                 property real cornerRadius: dockBackground.radius
                 property real bezelWidth: 10.0
-                property real intensity: 1.0
+                property real intensity: DockSettings.tintedGlassIntensity
                 fragmentShader: "qrc:/qml/shaders/glass_highlight.frag.qsb"
             }
         }
