@@ -102,13 +102,14 @@ void DockContextMenu::showForTask(int index)
         }
     }
 
-    // Close (only for running windows)
-    if (isWindow) {
-        menu->addSeparator();
-        menu->addAction(QIcon::fromTheme(QStringLiteral("window-close")), i18nc("@action:inmenu", "Close"), this, [this, index]() {
-            m_actions->closeTask(index);
-        });
-    }
+    // About / Quit come first in the footer: they occupy the slot Close
+    // used to have, right after the task actions. Settings follows, and
+    // Close is the very last item in the menu.
+    menu->addSeparator();
+    menu->addAction(QIcon::fromTheme(QStringLiteral("help-about")), i18nc("@action:inmenu", "About Krema"), this, [this]() {
+        Q_EMIT aboutRequested();
+    });
+    menu->addAction(QIcon::fromTheme(QStringLiteral("application-exit")), i18nc("@action:inmenu", "Quit"), qApp, &QApplication::quit);
 
     // Settings
     menu->addSeparator();
@@ -116,12 +117,13 @@ void DockContextMenu::showForTask(int index)
         Q_EMIT settingsRequested();
     });
 
-    // Standard KDE actions
-    menu->addSeparator();
-    menu->addAction(QIcon::fromTheme(QStringLiteral("help-about")), i18nc("@action:inmenu", "About Krema"), this, [this]() {
-        Q_EMIT aboutRequested();
-    });
-    menu->addAction(QIcon::fromTheme(QStringLiteral("application-exit")), i18nc("@action:inmenu", "Quit"), qApp, &QApplication::quit);
+    // Close (only for running windows), kept last in the menu
+    if (isWindow) {
+        menu->addSeparator();
+        menu->addAction(QIcon::fromTheme(QStringLiteral("window-close")), i18nc("@action:inmenu", "Close"), this, [this, index]() {
+            m_actions->closeTask(index);
+        });
+    }
 
     // Open before popup(): the popup grab makes QtWayland send the dock a
     // synthetic leave, which QML must already see as part of the menu hold.
