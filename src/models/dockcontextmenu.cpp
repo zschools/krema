@@ -18,6 +18,8 @@
 #include <QCursor>
 #include <QIcon>
 #include <QMenu>
+#include <QMouseEvent>
+#include <QWindow>
 
 namespace krema
 {
@@ -140,15 +142,57 @@ void DockContextMenu::showForTask(int index)
         }
     }
 
+    m_currentIndex = index;
+    m_switchArmed = false;
+
     // Open before popup(): the popup grab makes QtWayland send the dock a
     // synthetic leave, which QML must already see as part of the menu hold.
     // Also drives the interaction lock (dock stays visible while menu is open).
     setOpen(true);
+    m_activeMenu = menu;
+    // While the menu holds the popup grab, a click outside it is consumed
+    // by Qt just to dismiss the menu and never reaches the dock. Watch for
+    // a right-click on another dock icon so the menu can switch straight
+    // to that icon instead of making the user click twice (eventFilter).
+    qApp->installEventFilter(this);
     connect(menu, &QMenu::aboutToHide, this, [this]() {
         setOpen(false);
+        qApp->removeEventFilter(this);
+        m_activeMenu = nullptr;
+        if (m_switchArmed) {
+            m_switchArmed = false;
+            const QPointF point = m_switchPoint;
+            const int previousIndex = m_currentIndex;
+            // Queued: the new menu must only pop up once this menu's grab
+            // has been fully released.
+            QMetaObject::invokeMethod(this, [this, point, previousIndex]() {
+                Q_EMIT switchRequested(point.x(), point.y(), previousIndex);
+            }, Qt::QueuedConnection);
+        }
     });
 
     menu->popup(QCursor::pos());
+}
+
+void DockContextMenu::setDockWindow(QWindow *window)
+{
+    m_dockWindow = window;
+}
+
+bool DockContextMenu::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event->type() == QEvent::MouseButtonPress && m_activeMenu && m_dockWindow) {
+        auto *mouseEvent = static_cast<QMouseEvent *>(event);
+        if (mouseEvent->button() == Qt::RightButton) {
+            const QPoint globalPos = mouseEvent->globalPosition().toPoint();
+            const bool insideMenu = m_activeMenu->geometry().contains(globalPos);
+            if (!insideMenu && m_dockWindow->geometry().contains(globalPos)) {
+                m_switchPoint = QPointF(globalPos - m_dockWindow->geometry().topLeft());
+                m_switchArmed = true;
+            }
+        }
+    }
+    return QObject::eventFilter(watched, event);
 }
 
 bool DockContextMenu::isOpen() const

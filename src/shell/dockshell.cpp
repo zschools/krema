@@ -37,6 +37,7 @@ DockShell::DockShell(KremaSettings *globalSettings,
     , m_contextMenu(std::make_unique<DockContextMenu>(model, m_actions.get(), tracker, globalSettings, this))
     , m_previewController(std::make_unique<PreviewController>(model, m_view.get(), globalSettings))
 {
+    m_contextMenu->setDockWindow(m_view.get());
 }
 
 DockShell::~DockShell() = default;

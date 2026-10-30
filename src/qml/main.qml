@@ -831,6 +831,15 @@ Item {
     // with the compositor's pointer focus since Qt's hover is stale.
     Connections {
         target: DockContextMenu
+        // The open menu's grab ate a right-click on another icon just to
+        // close it; now that it is closed, open that icon's menu instead so
+        // one click switches menus. Clicking the same icon again only
+        // closes its menu, as before.
+        function onSwitchRequested(localX, localY, previousIndex) {
+            root.resolvePointerAt(localX, localY)
+            if (root.hoveredIndex >= 0 && root.hoveredIndex !== previousIndex)
+                DockContextMenu.showForTask(root.hoveredIndex)
+        }
         function onOpenChanged() {
             if (DockContextMenu.open) {
                 root._hoverReconciling = false
