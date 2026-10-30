@@ -111,6 +111,7 @@ void Application::connectSettingsAutoSave(KremaSettings *settings, QObject *cont
     connect(settings, &KremaSettings::PreviewHideDelayChanged, context, saveSettings);
     connect(settings, &KremaSettings::ShadowEnabledChanged, context, saveSettings);
     connect(settings, &KremaSettings::GroupedWindowClickActionChanged, context, saveSettings);
+    connect(settings, &KremaSettings::WindowTitleMaxLengthChanged, context, saveSettings);
     connect(settings, &KremaSettings::ShadowLightXChanged, context, saveSettings);
     connect(settings, &KremaSettings::ShadowLightYChanged, context, saveSettings);
     connect(settings, &KremaSettings::ShadowLightZChanged, context, saveSettings);

@@ -38,6 +38,13 @@ public:
     /// Close all windows for the task at @p index.
     Q_INVOKABLE void closeTask(int index);
 
+    /// Activate the @p childRow-th window of the grouped task at @p index.
+    Q_INVOKABLE void activateChildWindow(int index, int childRow);
+
+    /// Close every window of the grouped task at @p index, one request per
+    /// window. Falls back to closeTask() for tasks without children.
+    Q_INVOKABLE void closeAllTasks(int index);
+
     /// Toggle pinned state for the task at @p index.
     Q_INVOKABLE void togglePinned(int index);
 

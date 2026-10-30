@@ -6,6 +6,7 @@
 #include "desktopactions.h"
 #include "dockactions.h"
 #include "dockmodel.h"
+#include "krema.h"
 #include "notificationtracker.h"
 
 #include <taskmanager/abstracttasksmodel.h>
@@ -21,11 +22,12 @@
 namespace krema
 {
 
-DockContextMenu::DockContextMenu(DockModel *model, DockActions *actions, NotificationTracker *tracker, QObject *parent)
+DockContextMenu::DockContextMenu(DockModel *model, DockActions *actions, NotificationTracker *tracker, KremaSettings *settings, QObject *parent)
     : QObject(parent)
     , m_model(model)
     , m_actions(actions)
     , m_tracker(tracker)
+    , m_settings(settings)
 {
 }
 
@@ -117,12 +119,33 @@ void DockContextMenu::showForTask(int index)
         Q_EMIT settingsRequested();
     });
 
-    // Close (only for running windows), kept last in the menu
+    // Close (only for running windows), kept last in the menu. A task
+    // with several windows first lists each window's title: activating an
+    // entry raises that window, and the close action becomes Close All.
     if (isWindow) {
         menu->addSeparator();
-        menu->addAction(QIcon::fromTheme(QStringLiteral("window-close")), i18nc("@action:inmenu", "Close"), this, [this, index]() {
-            m_actions->closeTask(index);
-        });
+        const int childCount = tasksModel->rowCount(idx);
+        if (childCount > 1) {
+            const int maxLength = m_settings != nullptr ? m_settings->windowTitleMaxLength() : 60;
+            for (int child = 0; child < childCount; ++child) {
+                const QModelIndex childIdx = tasksModel->index(child, 0, idx);
+                QString title = childIdx.data(Qt::DisplayRole).toString();
+                if (maxLength > 0 && title.length() > maxLength) {
+                    title = title.left(maxLength) + QStringLiteral("…");
+                }
+                menu->addAction(childIdx.data(Qt::DecorationRole).value<QIcon>(), title, this, [this, index, child]() {
+                    m_actions->activateChildWindow(index, child);
+                });
+            }
+            menu->addSeparator();
+            menu->addAction(QIcon::fromTheme(QStringLiteral("window-close")), i18nc("@action:inmenu", "Close All"), this, [this, index]() {
+                m_actions->closeAllTasks(index);
+            });
+        } else {
+            menu->addAction(QIcon::fromTheme(QStringLiteral("window-close")), i18nc("@action:inmenu", "Close"), this, [this, index]() {
+                m_actions->closeTask(index);
+            });
+        }
     }
 
     // Open before popup(): the popup grab makes QtWayland send the dock a

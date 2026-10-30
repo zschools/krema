@@ -13,6 +13,7 @@
 #include <KService>
 
 #include <QDateTime>
+#include <QPersistentModelIndex>
 #include <QFileInfo>
 #include <QLoggingCategory>
 
@@ -73,6 +74,48 @@ void DockActions::closeTask(int index)
     const QModelIndex idx = tasksModel->index(index, 0);
     if (idx.isValid()) {
         tasksModel->requestClose(idx);
+    }
+}
+
+void DockActions::activateChildWindow(int index, int childRow)
+{
+    auto *tasksModel = m_model->tasksModel();
+    const QModelIndex idx = tasksModel->index(index, 0);
+    if (!idx.isValid()) {
+        return;
+    }
+    const QModelIndex childIdx = tasksModel->index(childRow, 0, idx);
+    if (childIdx.isValid()) {
+        tasksModel->requestActivate(childIdx);
+    }
+}
+
+void DockActions::closeAllTasks(int index)
+{
+    auto *tasksModel = m_model->tasksModel();
+    const QModelIndex idx = tasksModel->index(index, 0);
+    if (!idx.isValid()) {
+        return;
+    }
+
+    const int childCount = tasksModel->rowCount(idx);
+    if (childCount == 0) {
+        tasksModel->requestClose(idx);
+        return;
+    }
+
+    // Collect the children first: a close request is asynchronous, but a
+    // persistent index keeps each target valid even if rows shift while
+    // the requests are being sent.
+    QList<QPersistentModelIndex> children;
+    children.reserve(childCount);
+    for (int child = 0; child < childCount; ++child) {
+        children.append(tasksModel->index(child, 0, idx));
+    }
+    for (const QPersistentModelIndex &childIdx : children) {
+        if (childIdx.isValid()) {
+            tasksModel->requestClose(childIdx);
+        }
     }
 }
 

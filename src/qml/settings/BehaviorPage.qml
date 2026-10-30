@@ -699,5 +699,18 @@ SettingsPage {
                 DockSettings.groupedWindowClickAction = index
             }
         }
+
+        FormCard.FormDelegateSeparator {}
+
+        // Cap for the per-window titles listed in the dock's right-click
+        // menu for apps with multiple windows; 0 keeps the full title.
+        SliderDelegate {
+            text: i18n("Window title length")
+            description: i18n("Maximum length of the window titles listed in the right-click menu of an app with multiple windows.")
+            from: 0; to: 200; stepSize: 1
+            value: DockSettings.windowTitleMaxLength
+            valueText: value === 0 ? i18n("Full title") : i18nc("@label characters", "%1 characters", value)
+            onMoved: (value) => DockSettings.windowTitleMaxLength = value
+        }
     }
 }
