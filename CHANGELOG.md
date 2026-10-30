@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - The Floating margin setting went up to 128 px instead of 32 px (#90)
 - Moved "Close" to the very bottom of the dock's right-click menu. "About Krema" and "Quit" took the place Close used to occupy, above "Settings...".
+- Removed the app name / window title header (and its separator) from the top of the dock's right-click menu, so the menu now starts directly with the app's actions such as "New Window".
 - Changed the panel Opacity slider to step in half-percent increments instead of 5 percent, so fine opacity adjustments took a single arrow press or a short drag.
 
 ### Fixed

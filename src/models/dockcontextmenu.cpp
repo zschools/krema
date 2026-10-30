@@ -40,22 +40,14 @@ void DockContextMenu::showForTask(int index)
     }
 
     const bool isWindow = idx.data(TaskManager::AbstractTasksModel::IsWindow).toBool();
-    const QString name = idx.data(Qt::DisplayRole).toString();
 
     const bool pinned = m_model->isPinned(index);
 
     auto *menu = new QMenu();
     menu->setAttribute(Qt::WA_DeleteOnClose);
 
-    // App name header (disabled, bold)
-    QAction *header = menu->addAction(name);
-    header->setEnabled(false);
-    QFont boldFont = header->font();
-    boldFont.setBold(true);
-    header->setFont(boldFont);
-
-    menu->addSeparator();
-
+    // No app-name header: the menu starts directly with the app's
+    // desktop entry actions.
     // Desktop entry actions (e.g. "New Private Window"), placed like Plasma's
     // task manager. Group parents report their first window's launcher URL.
     // Each action is captured by value together with its KService, so it
