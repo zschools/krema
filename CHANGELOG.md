@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fixed the first right-click on a dock icon sometimes doing nothing, so the context menu needed a second click. Presses and clicks now resolve the icon from the click position itself with freshly published icon geometry instead of relying on hover state that can lag a re-centring layout or the post-menu reconciliation.
 - Floating gaps used the effective per-screen Floating state and configured global margin. Shadows no longer shifted the requested gap, screen reservation, or preview position; same-edge panel behavior remained unchanged.
 - With "Measure gap from: Panels", Floating off now follows the visible same-edge panel surface, hidden dodge and auto-hide frames are ignored, and panel-depth updates animate without leaving the dock or its previews at a stale depth.
 - Dock shadows no longer clipped at low light heights by their containing surfaces; when the requested gap is smaller than the outward shadow, pixels may still clip at the layer-surface/output boundary. Screen reservation and window preview placement keep the requested gap, and previews stay interactive after native surface resizes (#118)

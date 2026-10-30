@@ -126,6 +126,30 @@ Item {
         _runHoverRehit()
     }
 
+    // Resolve the hover target from a real press/click position. Motion
+    // hit-testing alone can leave hoveredIndex stale at the moment of a
+    // click: the published delegate centres lag a re-centring layout until
+    // the debounce timer republishes them, the post-menu reconcile may not
+    // have run yet, and updateHoveredItem() skips its hit test entirely
+    // while _pointerOnDock is false (the popup grab's fake leave can leave
+    // it cleared). A press the MouseArea received proves the pointer is on
+    // the dock, so refresh the published geometry synchronously and hit-test
+    // the event's own coordinates; the first click then acts on the item
+    // actually under the pointer instead of being swallowed.
+    function resolvePointerAt(x, y) {
+        if (_menuHeld || keyboardNavigating) return
+        _pointerOnDock = true
+        for (let i = 0; i < dockRepeater.count; ++i) {
+            let item = dockRepeater.itemAt(i)
+            if (item)
+                item.publishDelegateGeometry()
+        }
+        if (_hoverReconciling)
+            _reconcileAt(x, y)
+        else
+            trackPointer(x, y)
+    }
+
     Timer {
         id: delegateGeometryRefreshTimer
         interval: 50
@@ -888,10 +912,7 @@ Item {
                 root._pointerRootX = mouse.x
                 root._pointerRootY = mouse.y
             }
-            if (root._hoverReconciling && !root._menuHeld)
-                root._reconcileAt(mouse.x, mouse.y)
-            else if (!root.keyboardNavigating)
-                root.trackPointer(mouse.x, mouse.y)
+            root.resolvePointerAt(mouse.x, mouse.y)
             if (mouse.button === Qt.LeftButton && root.hoveredIndex >= 0) {
                 root._dragStartX = mouse.x
                 root._dragStartY = mouse.y
@@ -929,6 +950,11 @@ Item {
         onClicked: function(mouse) {
             // Suppress clicks for the entire held-button cycle after a drag.
             if (root._dragWasActive) return
+            // The hover state the press resolved can go stale again before
+            // the release (a layout refresh landing in between), so resolve
+            // the target from the click position itself.
+            if (!root._menuHeld)
+                root.resolvePointerAt(mouse.x, mouse.y)
             if (root.hoveredIndex < 0) return
             if (mouse.button === Qt.LeftButton) {
                 let idx = DockModel.tasksModel.index(root.hoveredIndex, 0)
