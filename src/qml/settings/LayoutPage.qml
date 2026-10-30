@@ -271,6 +271,80 @@ SettingsPage {
 
         FormCard.FormDelegateSeparator {}
 
+        // Extra reservation past the dock itself, so a maximized window
+        // stops this far from the dock. Unlike the floating margin it does
+        // not move the dock, and it applies whether Floating is on or off
+        // (it follows "Reserve screen space" in Behavior).
+        SliderDelegate {
+            id: maximizedSlider
+            text: i18n("Maximized margin")
+            description: i18n("Gap between the dock and a maximized window")
+            from: 0
+            to: 128
+            stepSize: 1
+            value: DockSettings.maximizedMargin
+            valueText: i18nc("@label pixels", "%1 px", value)
+            onMoved: (value) => DockSettings.maximizedMargin = Math.round(value)
+        }
+
+        FormCard.FormDelegateSeparator {}
+
+        SliderDelegate {
+            id: paddingTopSlider
+            text: i18n("Panel padding top")
+            description: i18n("Space between the dock background and the top of the icons")
+            from: 0
+            to: 64
+            stepSize: 1
+            value: DockSettings.panelPaddingTop
+            valueText: i18nc("@label pixels", "%1 px", value)
+            onMoved: (value) => DockSettings.panelPaddingTop = Math.round(value)
+        }
+
+        FormCard.FormDelegateSeparator {}
+
+        SliderDelegate {
+            id: paddingRightSlider
+            text: i18n("Panel padding right")
+            description: i18n("Space between the dock background and the right end of the icons")
+            from: 0
+            to: 64
+            stepSize: 1
+            value: DockSettings.panelPaddingRight
+            valueText: i18nc("@label pixels", "%1 px", value)
+            onMoved: (value) => DockSettings.panelPaddingRight = Math.round(value)
+        }
+
+        FormCard.FormDelegateSeparator {}
+
+        SliderDelegate {
+            id: paddingBottomSlider
+            text: i18n("Panel padding bottom")
+            description: i18n("Space between the dock background and the bottom of the icons")
+            from: 0
+            to: 64
+            stepSize: 1
+            value: DockSettings.panelPaddingBottom
+            valueText: i18nc("@label pixels", "%1 px", value)
+            onMoved: (value) => DockSettings.panelPaddingBottom = Math.round(value)
+        }
+
+        FormCard.FormDelegateSeparator {}
+
+        SliderDelegate {
+            id: paddingLeftSlider
+            text: i18n("Panel padding left")
+            description: i18n("Space between the dock background and the left end of the icons")
+            from: 0
+            to: 64
+            stepSize: 1
+            value: DockSettings.panelPaddingLeft
+            valueText: i18nc("@label pixels", "%1 px", value)
+            onMoved: (value) => DockSettings.panelPaddingLeft = Math.round(value)
+        }
+
+        FormCard.FormDelegateSeparator {}
+
         SliderDelegate {
             id: radiusSlider
             text: i18n("Corner radius")

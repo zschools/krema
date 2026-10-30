@@ -128,6 +128,41 @@
       <max>1</max>
     </entry>
 
+    <entry name="MaximizedMargin" type="Int">
+      <label>Extra gap between the dock and a maximized window, added to the reserved screen space on the dock's edge (px). Applies whether Floating is on or off</label>
+      <default>0</default>
+      <min>0</min>
+      <max>128</max>
+    </entry>
+
+    <entry name="PanelPaddingTop" type="Int">
+      <label>Padding between the top of the dock background and the icon row (px)</label>
+      <default>8</default>
+      <min>0</min>
+      <max>64</max>
+    </entry>
+
+    <entry name="PanelPaddingRight" type="Int">
+      <label>Padding between the right of the dock background and the icon row (px)</label>
+      <default>8</default>
+      <min>0</min>
+      <max>64</max>
+    </entry>
+
+    <entry name="PanelPaddingBottom" type="Int">
+      <label>Padding between the bottom of the dock background and the icon row (px)</label>
+      <default>8</default>
+      <min>0</min>
+      <max>64</max>
+    </entry>
+
+    <entry name="PanelPaddingLeft" type="Int">
+      <label>Padding between the left of the dock background and the icon row (px)</label>
+      <default>8</default>
+      <min>0</min>
+      <max>64</max>
+    </entry>
+
     <entry name="VisibilityMode" type="Int">
       <label>Dock visibility mode (0=Always, 1=AutoHide, 2=Dodge)</label>
       <default>0</default>
@@ -191,6 +226,26 @@
     <entry name="TintColor" type="String">
       <label>Custom tint color for Tinted style (hex RGB)</label>
       <default>#1e3a5f</default>
+    </entry>
+
+    <entry name="TintedBlur" type="Bool">
+      <label>Blur behind the Tinted background (frosted-glass effect)</label>
+      <default>false</default>
+    </entry>
+
+    <entry name="UseCustomIndicatorColors" type="Bool">
+      <label>Use custom colors for the running indicator dots instead of the theme color</label>
+      <default>false</default>
+    </entry>
+
+    <entry name="IndicatorActiveColor" type="String">
+      <label>Indicator dot color for the active window (hex RGB)</label>
+      <default>#ffffff</default>
+    </entry>
+
+    <entry name="IndicatorInactiveColor" type="String">
+      <label>Indicator dot color for inactive windows (hex RGB)</label>
+      <default>#a0a0a0</default>
     </entry>
 
     <entry name="ShadowEnabled" type="Bool">

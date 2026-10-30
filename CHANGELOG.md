@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Added a "Maximized margin" setting (Settings → Layout & Position, below Floating margin). It reserved extra space past the dock itself, so a maximized window stopped that far from the dock. It did not move the dock and applied whether Floating was on or off.
+- Added per-side "Panel padding" settings (top, right, bottom, left; Settings → Layout & Position, below Maximized margin) that set the space between the dock background and the icon row on each side independently.
+- Added a "Glass effect" switch for the Tinted panel style (Settings → Panel Style, above Opacity). When on, the compositor blurred and contrasted what was behind the dock through the tint color, giving the tinted background a frosted-glass look.
+- Added "Custom indicator colors" (Settings → Panel Style → Indicator). With it on, the running indicator dots used separate custom colors for the active window and for inactive windows; with it off, the dots followed the theme as before.
+
 - Added Slack Desktop unread and mention indicators: blue unread dots and red mention badges, with counts when Slack reports them and support for Electron tray identities.
 - Added Discord, Vesktop, and WebCord unread and mention indicators, including the official Arch/Manjaro Discord package without `libunity`. Unread channels show a blue dot; mentions and DMs show a red badge with their count. The count no longer disappears when the popup times out, and clears as soon as you read the messages in the app. WebCord also reports its mention count while it is closed to the tray, and Flatpak and native installs of the same app now share one badge.
 - Added Mattermost Desktop unread and mention indicators. Unread channels show a blue dot and mentions show a red badge, even while Mattermost is closed to the tray. Mention counts stay after the popup times out and clear once you read the mentions in Mattermost.

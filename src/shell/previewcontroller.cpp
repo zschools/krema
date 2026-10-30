@@ -540,7 +540,7 @@ void PreviewController::applyEdgeLayout()
     const int animationOverflow = m_dockView->animationOverflowHeight();
     const int otherPanels = m_dockView->reservedPanelInset();
     const int displayedPanelBar = m_dockView->displayedPanelBarHeight();
-    const int nativeReservedBehind = dockReservesPanelBar ? m_dockView->panelBarHeight() : otherPanels;
+    const int nativeReservedBehind = dockReservesPanelBar ? m_dockView->screenReserveDepth() : otherPanels;
     // Meet the dock's displayed input extent. The native reservation moves
     // immediately, so compensate for its target position to follow the
     // displayed bar without adding an input dead-band.

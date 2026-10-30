@@ -112,4 +112,28 @@ TEST_CASE("Surface geometry calculations", "[geometry]")
         REQUIRE(krema::panelBarHeight(48, 8, 1) == 65); // minimum margin
         REQUIRE(krema::panelBarHeight(48, 8, 32) == 96); // maximum margin
     }
+
+    SECTION("Per-side padding totals drive the panel bar and surface")
+    {
+        // Symmetric 8+8 padding matches the legacy single-padding results.
+        REQUIRE(krema::panelBarHeightForPadding(48, 16, 8) == krema::panelBarHeight(48, 8, 8));
+        REQUIRE(krema::surfaceHeightForPadding(48, 16, 8, 1.6, 36, 8) == krema::surfaceHeight(48, 8, 1.6, 36, 8));
+        // Asymmetric: total 20 (e.g. top 14 + bottom 6), far side 14.
+        REQUIRE(krema::panelBarHeightForPadding(48, 20, 8) == 76); // 48+20+8
+        // dockHeight = 48+20 = 68; animation overflow subtracts the far
+        // padding: ceil(56*0.6 + 14*1.6 - 14) = 42; total = 68+42+8 = 118.
+        REQUIRE(krema::surfaceHeightForPadding(48, 20, 14, 1.6, 36, 8) == 118);
+        REQUIRE(krema::screenReserveDepthForPadding(48, 20, 8, 0) == 76);
+        REQUIRE(krema::screenReserveDepthForPadding(48, 20, 8, 8) == 68);
+    }
+
+    SECTION("Maximized margin widens only the reservation, not the panel bar")
+    {
+        // The visible bar is unchanged; the reservation grows by the margin
+        // so a maximized window stops that far from the dock itself.
+        REQUIRE(krema::panelBarHeightForPadding(48, 16, 8) == 72);
+        REQUIRE(krema::screenReserveDepthForPadding(48, 16, 8, 0, 24) == 96); // 72+24
+        REQUIRE(krema::screenReserveDepthForPadding(48, 16, 0, 0, 24) == 88); // non-floating: 64+24
+        REQUIRE(krema::screenReserveDepthForPadding(48, 16, 8, 0, 0) == 72); // default margin 0
+    }
 }

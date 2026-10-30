@@ -11,7 +11,7 @@ import com.bhyoo.krema 1.0
 SettingsPage {
     id: page
     title: i18n("Panel Style")
-    subtitle: i18n("Background style, opacity and tint of the dock panel")
+    subtitle: i18n("Background style, opacity, tint and indicator of the dock panel")
 
     // Background style indices (BackgroundStyleType): 0 Panel Inherit,
     // 1 Transparent, 2 Tinted, 3 Acrylic.
@@ -158,6 +158,21 @@ SettingsPage {
     FormCard.FormCard {
         visible: DockSettings.backgroundStyle !== 1
 
+        // Glass effect (Tinted only), above Opacity: KWin blur + contrast
+        // behind the tint color, so the tinted panel becomes frosted glass
+        // instead of a flat color.
+        FormCard.FormSwitchDelegate {
+            visible: DockSettings.backgroundStyle === 2
+            text: i18n("Glass effect")
+            description: i18n("Blur what is behind the dock through the tint color")
+            checked: DockSettings.tintedBlur
+            onToggled: DockSettings.tintedBlur = checked
+        }
+
+        FormCard.FormDelegateSeparator {
+            visible: DockSettings.backgroundStyle === 2  // Tinted
+        }
+
         // Opacity (hidden for Transparent only)
         SliderDelegate {
             text: i18n("Opacity")
@@ -227,6 +242,86 @@ SettingsPage {
             description: i18n("Use the system accent color instead of the default panel color")
             checked: DockSettings.useAccentColor
             onToggled: DockSettings.useAccentColor = checked
+        }
+    }
+
+    // --- Running indicator dots ---
+    FormCard.FormHeader {
+        title: i18n("Indicator")
+    }
+
+    FormCard.FormCard {
+        // Off: the dots follow the theme (Kirigami text color). On: the
+        // two custom colors below are used, one per window state.
+        FormCard.FormSwitchDelegate {
+            text: i18n("Custom indicator colors")
+            description: i18n("Color the running indicator dots yourself instead of following the theme")
+            checked: DockSettings.useCustomIndicatorColors
+            onToggled: DockSettings.useCustomIndicatorColors = checked
+        }
+
+        FormCard.FormDelegateSeparator {
+            visible: DockSettings.useCustomIndicatorColors
+        }
+
+        FormCard.AbstractFormDelegate {
+            id: activeColorDelegate
+            visible: DockSettings.useCustomIndicatorColors
+            background: null
+            focusPolicy: Qt.NoFocus
+            Accessible.ignored: true
+            onClicked: activeColorSwatch.clicked()
+            contentItem: RowLayout {
+                spacing: Kirigami.Units.smallSpacing
+
+                QQC2.Label {
+                    Layout.fillWidth: true
+                    text: i18n("Active window color")
+                    elide: Text.ElideRight
+                    color: activeColorDelegate.enabled ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
+                    Accessible.ignored: true
+                }
+
+                ColorSwatchButton {
+                    id: activeColorSwatch
+                    accessibleName: i18n("Active window color")
+                    dialogTitle: i18n("Choose active window indicator color")
+                    color: DockSettings.indicatorActiveColor
+                    onPicked: (color) => DockSettings.indicatorActiveColor = color.toString()
+                }
+            }
+        }
+
+        FormCard.FormDelegateSeparator {
+            visible: DockSettings.useCustomIndicatorColors
+        }
+
+        FormCard.AbstractFormDelegate {
+            id: inactiveColorDelegate
+            visible: DockSettings.useCustomIndicatorColors
+            background: null
+            focusPolicy: Qt.NoFocus
+            Accessible.ignored: true
+            onClicked: inactiveColorSwatch.clicked()
+            contentItem: RowLayout {
+                spacing: Kirigami.Units.smallSpacing
+
+                QQC2.Label {
+                    Layout.fillWidth: true
+                    text: i18n("Inactive window color")
+                    elide: Text.ElideRight
+                    color: inactiveColorDelegate.enabled ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
+                    Accessible.ignored: true
+                }
+
+                ColorSwatchButton {
+                    id: inactiveColorSwatch
+                    accessibleName: i18n("Inactive window color")
+                    dialogTitle: i18n("Choose inactive window indicator color")
+                    color: DockSettings.indicatorInactiveColor
+                    onPicked: (color) => DockSettings.indicatorInactiveColor = color.toString()
+                }
+            }
         }
     }
 }

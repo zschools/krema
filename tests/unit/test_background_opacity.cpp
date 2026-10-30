@@ -8,6 +8,7 @@
 // as chosen and survive a restart instead of being clamped by KConfigXT.
 
 #include "krema.h"
+#include "style/backgroundstyle.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -87,4 +88,23 @@ TEST_CASE("BackgroundOpacity keeps every value the settings slider offers", "[se
         CHECK(storeAndReload(-0.2) == 0.0);
         CHECK(storeAndReload(1.5) == 1.0);
     }
+}
+
+TEST_CASE("Tinted glass blur is opt-in for the Tinted style only", "[settings][background-style]")
+{
+    using krema::BackgroundStyleType;
+    using krema::styleUsesBlur;
+
+    CHECK(styleUsesBlur(BackgroundStyleType::PanelInherit));
+    CHECK(styleUsesBlur(BackgroundStyleType::Acrylic));
+    CHECK_FALSE(styleUsesBlur(BackgroundStyleType::Tinted));
+    CHECK_FALSE(styleUsesBlur(BackgroundStyleType::Transparent));
+
+    // The TintedBlur switch turns Tinted into a blurred (glass) style and
+    // leaves every other style exactly as before.
+    CHECK(styleUsesBlur(BackgroundStyleType::Tinted, true));
+    CHECK_FALSE(styleUsesBlur(BackgroundStyleType::Tinted, false));
+    CHECK_FALSE(styleUsesBlur(BackgroundStyleType::Transparent, true));
+    CHECK(styleUsesBlur(BackgroundStyleType::PanelInherit, true));
+    CHECK(styleUsesBlur(BackgroundStyleType::Acrylic, false));
 }

@@ -9,7 +9,7 @@
 namespace krema
 {
 
-void applyBackgroundToWindow(QWindow *window, BackgroundStyleType type, const QRegion &region)
+void applyBackgroundToWindow(QWindow *window, BackgroundStyleType type, const QRegion &region, bool tintedBlur)
 {
     if (!window) {
         return;
@@ -35,6 +35,15 @@ void applyBackgroundToWindow(QWindow *window, BackgroundStyleType type, const QR
         break;
 
     case BackgroundStyleType::Tinted:
+        // Frosted glass (opt-in): blur + contrast behind the tint color,
+        // exactly like PanelInherit, so the tinted panel shows a blurred
+        // backdrop through its opacity instead of a flat color.
+        if (tintedBlur && KWindowEffects::isEffectAvailable(KWindowEffects::BlurBehind)) {
+            KWindowEffects::enableBlurBehind(window, true, region);
+            KWindowEffects::enableBackgroundContrast(window, true, 1.0, 1.0, 1.0, region);
+        }
+        break;
+
     case BackgroundStyleType::Transparent:
         // No compositor effects — QML handles the background directly.
         break;
@@ -104,7 +113,13 @@ QColor computeBackgroundColor(BackgroundStyleType type, const QString &tintColor
 
 bool styleUsesBlur(BackgroundStyleType type)
 {
-    return type == BackgroundStyleType::PanelInherit || type == BackgroundStyleType::Acrylic;
+    return styleUsesBlur(type, false);
+}
+
+bool styleUsesBlur(BackgroundStyleType type, bool tintedBlur)
+{
+    return type == BackgroundStyleType::PanelInherit || type == BackgroundStyleType::Acrylic
+        || (tintedBlur && type == BackgroundStyleType::Tinted);
 }
 
 bool isStyleAvailable(BackgroundStyleType /* type */)

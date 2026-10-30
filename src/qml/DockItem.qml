@@ -1157,9 +1157,16 @@ Item {
                 width: dockItem.model.IsActive ? 4 : 3
                 height: width
                 radius: width / 2
+                // Attention dots always use the theme's negative color.
+                // Otherwise custom indicator colors (Panel Style) win when
+                // enabled, split by active vs inactive window; without them
+                // the dots follow the theme text color as before.
                 color: (dockItem._showAttentionAnim && dockItem._attentionType === 5)
                        ? Kirigami.Theme.negativeTextColor
-                       : Kirigami.Theme.textColor
+                       : DockSettings.useCustomIndicatorColors
+                         ? (dockItem.model.IsActive ? DockSettings.indicatorActiveColor
+                                                    : DockSettings.indicatorInactiveColor)
+                         : Kirigami.Theme.textColor
                 opacity: (dockItem._showAttentionAnim && dockItem._attentionType === 5)
                          ? dockItem._dotBlinkOpacity
                          : (dockItem.model.IsMinimized ? 0.4 : 0.8)

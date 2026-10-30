@@ -99,6 +99,12 @@ public:
     /// edge while the gap is measured from panels; 0 otherwise.
     [[nodiscard]] int reservedPanelInset() const;
 
+    /// Total screen-space reservation depth of this dock: the visible panel
+    /// bar plus the maximized-window margin, minus the panel inset other
+    /// panels already reserve. This is the exclusive zone the compositor
+    /// keeps free, so maximized windows stop maximizedMargin() past the dock.
+    [[nodiscard]] int screenReserveDepth() const;
+
     /// Recalculate surface size (called when iconSize/maxZoomFactor change).
     void updateSize();
 
@@ -166,6 +172,12 @@ Q_SIGNALS:
     void displayedEdgeDistanceChanged();
 
 private:
+    /// Sum of the two secondary-axis panel paddings (top+bottom for a
+    /// horizontal dock, left+right for a vertical one).
+    [[nodiscard]] int panelPaddingTotal() const;
+    /// Panel padding on the side facing away from the screen edge.
+    [[nodiscard]] int panelFarPadding() const;
+
     void handleScreenChanged(QScreen *newScreen);
     void handleScreenGeometryChanged();
     /// Whether the gap is currently measured from panels (setting on and KWin scripting available).
@@ -192,7 +204,6 @@ private:
     int m_surfaceFloatingPadding = -1;
     qreal m_displayedEdgeDistance = 0;
 
-    static constexpr int s_padding = 8;
     /// Minimum tooltip reserve; covers the tooltip height above/below a horizontal panel.
     static constexpr int s_tooltipReserve = 36;
 };

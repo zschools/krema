@@ -77,4 +77,37 @@ inline int screenReserveDepth(int iconSize, int padding, int floatingPadding, in
     return iconSize + padding * 2 + floatingPadding - reservedInset;
 }
 
+/// Total surface height with per-side panel padding: @p paddingTotal is the
+/// sum of both secondary-axis paddings (top+bottom for a horizontal dock,
+/// left+right for a vertical one), @p farPadding is the padding on the side
+/// facing away from the screen edge (the side zoomed icons grow toward).
+inline int surfaceHeightForPadding(int iconSize,
+                                   int paddingTotal,
+                                   int farPadding,
+                                   double maxZoomFactor,
+                                   int tooltipReserve,
+                                   int floatingPadding,
+                                   int shadowOverflow = 0)
+{
+    const int dockHeight = iconSize + paddingTotal;
+    const int overflow = animationOverflowHeight(iconSize, farPadding, maxZoomFactor);
+    const int topOverflow = std::max({overflow, tooltipReserve, shadowOverflow});
+    return dockHeight + topOverflow + floatingPadding;
+}
+
+/// Height of the visible panel bar with per-side panel padding
+/// (icon + secondary-axis padding total + floating gap).
+inline int panelBarHeightForPadding(int iconSize, int paddingTotal, int floatingPadding)
+{
+    return iconSize + paddingTotal + floatingPadding;
+}
+
+/// Screen-space reservation with per-side panel padding. @p extraGap is an
+/// additional gap reserved past the visible panel bar (the maximized-window
+/// margin), so maximized windows stop that far from the dock itself.
+inline int screenReserveDepthForPadding(int iconSize, int paddingTotal, int floatingPadding, int reservedInset, int extraGap = 0)
+{
+    return iconSize + paddingTotal + floatingPadding + extraGap - reservedInset;
+}
+
 } // namespace krema

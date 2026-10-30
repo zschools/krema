@@ -1052,13 +1052,22 @@ Item {
     Rectangle {
         id: dockPanel
 
-        // Panel size: primary axis stretches to content, secondary axis = icon + padding
+        // Per-side padding between the panel background and the icon row
+        // (Settings → Layout & Position). Absolute screen axes: top is
+        // always the panel's top side, whatever edge the dock sits on.
+        readonly property real padTop: DockSettings.panelPaddingTop
+        readonly property real padRight: DockSettings.panelPaddingRight
+        readonly property real padBottom: DockSettings.panelPaddingBottom
+        readonly property real padLeft: DockSettings.panelPaddingLeft
+
+        // Panel size: primary axis stretches to content plus its two
+        // paddings, secondary axis = icon + its two paddings
         width: DockView.isVertical
-            ? (DockSettings.iconSize + Kirigami.Units.largeSpacing * 2)
-            : Math.max(dockRow.implicitWidth + root.taskZoneGap + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
+            ? (DockSettings.iconSize + padLeft + padRight)
+            : Math.max(dockRow.implicitWidth + root.taskZoneGap + padLeft + padRight, Kirigami.Units.gridUnit * 6)
         height: DockView.isVertical
-            ? Math.max(dockRow.implicitHeight + root.taskZoneGap + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
-            : (DockSettings.iconSize + Kirigami.Units.largeSpacing * 2)
+            ? Math.max(dockRow.implicitHeight + root.taskZoneGap + padTop + padBottom, Kirigami.Units.gridUnit * 6)
+            : (DockSettings.iconSize + padTop + padBottom)
         color: "transparent"
 
         // Rest slot coordinates stay at the visible panel position even
@@ -1351,21 +1360,23 @@ Item {
             }
             x: {
                 if (!DockView.isVertical) {
-                    return (parent.width - animatedContentWidth) / 2
+                    // Leading padding plus half of any slack the minimum
+                    // panel length leaves over.
+                    return dockPanel.padLeft + Math.max(0, (parent.width - dockPanel.padLeft - dockPanel.padRight - animatedContentWidth) / 2)
                 }
                 let indicatorSpace = 4 + Kirigami.Units.smallSpacing
                 return (DockView.edge === 2)
-                    ? Kirigami.Units.largeSpacing - indicatorSpace
-                    : Kirigami.Units.largeSpacing
+                    ? dockPanel.padLeft - indicatorSpace
+                    : dockPanel.padLeft
             }
             y: {
                 if (DockView.isVertical) {
-                    return (parent.height - animatedContentHeight) / 2
+                    return dockPanel.padTop + Math.max(0, (parent.height - dockPanel.padTop - dockPanel.padBottom - animatedContentHeight) / 2)
                 }
                 let indicatorSpace = 4 + Kirigami.Units.smallSpacing
                 return (DockView.edge === 0)
-                    ? Kirigami.Units.largeSpacing - indicatorSpace
-                    : Kirigami.Units.largeSpacing
+                    ? dockPanel.padTop - indicatorSpace
+                    : dockPanel.padTop
             }
 
             // Animate existing items displaced by add/remove within the Flow.

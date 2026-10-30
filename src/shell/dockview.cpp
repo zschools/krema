@@ -185,6 +185,27 @@ int DockView::floatingPadding() const
     return m_panelInset.total + (floating ? m_settings->floatingMargin() : 0);
 }
 
+int DockView::panelPaddingTotal() const
+{
+    return isVertical() ? m_settings->panelPaddingLeft() + m_settings->panelPaddingRight()
+                        : m_settings->panelPaddingTop() + m_settings->panelPaddingBottom();
+}
+
+int DockView::panelFarPadding() const
+{
+    switch (m_edge) {
+    case DockPlatform::Edge::Top:
+        return m_settings->panelPaddingBottom();
+    case DockPlatform::Edge::Bottom:
+        return m_settings->panelPaddingTop();
+    case DockPlatform::Edge::Left:
+        return m_settings->panelPaddingRight();
+    case DockPlatform::Edge::Right:
+        return m_settings->panelPaddingLeft();
+    }
+    return m_settings->panelPaddingTop();
+}
+
 int DockView::shadowOverflow() const
 {
     if (!m_settings->shadowEnabled()) {
@@ -192,7 +213,7 @@ int DockView::shadowOverflow() const
     }
 
     const int iconSize = m_screenSettings ? m_screenSettings->iconSize() : m_settings->iconSize();
-    return krema::shadowOverflowHeight(iconSize + s_padding * 2,
+    return krema::shadowOverflowHeight(iconSize + panelPaddingTotal(),
                                        isVertical() ? m_settings->shadowLightX() : m_settings->shadowLightY(),
                                        m_settings->shadowLightZ(),
                                        m_settings->shadowElevation(),
@@ -342,13 +363,19 @@ void DockView::setScreenSettings(ScreenSettings *screenSettings)
 int DockView::panelBarHeight() const
 {
     const int iconSize = m_screenSettings ? m_screenSettings->iconSize() : m_settings->iconSize();
-    return krema::panelBarHeight(iconSize, s_padding, floatingPadding());
+    return krema::panelBarHeightForPadding(iconSize, panelPaddingTotal(), floatingPadding());
 }
 
 int DockView::displayedPanelBarHeight() const
 {
     const int iconSize = m_screenSettings ? m_screenSettings->iconSize() : m_settings->iconSize();
-    return krema::panelBarHeight(iconSize, s_padding, qRound(m_displayedEdgeDistance));
+    return krema::panelBarHeightForPadding(iconSize, panelPaddingTotal(), qRound(m_displayedEdgeDistance));
+}
+
+int DockView::screenReserveDepth() const
+{
+    const int iconSize = m_screenSettings ? m_screenSettings->iconSize() : m_settings->iconSize();
+    return krema::screenReserveDepthForPadding(iconSize, panelPaddingTotal(), floatingPadding(), m_panelInset.reserved, m_settings->maximizedMargin());
 }
 
 DockPlatform *DockView::platform() const
@@ -404,7 +431,7 @@ void DockView::updateSize()
     }
     const int tooltipReserve = isVertical() ? std::max(s_tooltipReserve, m_sideTooltipReserve) : s_tooltipReserve;
     const int shadowOverflow = this->shadowOverflow();
-    const int h = krema::surfaceHeight(iconSize, s_padding, maxZoom, tooltipReserve, m_surfaceFloatingPadding, shadowOverflow);
+    const int h = krema::surfaceHeightForPadding(iconSize, panelPaddingTotal(), panelFarPadding(), maxZoom, tooltipReserve, m_surfaceFloatingPadding, shadowOverflow);
     const QRect screenGeo = screen() ? screen()->geometry() : QRect();
 
     if (isVertical()) {
@@ -421,9 +448,12 @@ void DockView::updateSize()
         m_platform->setSize(QSize(0, h));
     }
 
-    // Reserve only the visible panel bar; panel-relative insets are subtracted
-    // when the dock is measured past existing panels.
-    const int exclusiveZone = krema::screenReserveDepth(iconSize, s_padding, floatingPadding(), m_panelInset.reserved);
+    // Reserve the visible panel bar plus the maximized-window margin;
+    // panel-relative insets are subtracted when the dock is measured past
+    // existing panels. The margin only widens the reservation: the dock
+    // panel itself stays at its floating distance from the edge, whether
+    // Floating is on or off.
+    const int exclusiveZone = screenReserveDepth();
     m_platform->setExclusiveZone(m_settings->reserveScreenSpace() ? exclusiveZone : 0);
 
     if (m_visibilityController) {
@@ -438,7 +468,7 @@ int DockView::animationOverflowHeight() const
 {
     const int iconSize = m_screenSettings ? m_screenSettings->iconSize() : m_settings->iconSize();
     const double maxZoom = m_screenSettings ? m_screenSettings->maxZoomFactor() : m_settings->maxZoomFactor();
-    return krema::animationOverflowHeight(iconSize, s_padding, maxZoom);
+    return krema::animationOverflowHeight(iconSize, panelFarPadding(), maxZoom);
 }
 
 void DockView::handleScreenChanged(QScreen *newScreen)
@@ -527,10 +557,11 @@ void DockView::applyBackgroundStyle()
 {
     auto type = static_cast<BackgroundStyleType>(m_settings->backgroundStyle());
     qreal opacity = m_settings->backgroundOpacity();
+    const bool tintedBlur = m_settings->tintedBlur();
 
     // When opacity is 0, compositor effects (blur/contrast) must also be disabled.
     // Otherwise KWindowEffects creates a visible frosted layer even with transparent QML color.
-    if (styleUsesBlur(type) && qFuzzyIsNull(opacity)) {
+    if (styleUsesBlur(type, tintedBlur) && qFuzzyIsNull(opacity)) {
         removeBackgroundFromWindow(this);
         Q_EMIT backgroundColorChanged();
         Q_EMIT backgroundStyleTypeChanged();
@@ -559,10 +590,10 @@ void DockView::applyBackgroundStyle()
     // An empty region means "whole surface" to KWin, which would blur the entire
     // (mostly transparent) layer-shell surface. Until QML reports the panel rect,
     // keep compositor effects off; panelRectChanged re-applies them.
-    if (region.isEmpty() && styleUsesBlur(type)) {
+    if (region.isEmpty() && styleUsesBlur(type, tintedBlur)) {
         removeBackgroundFromWindow(this);
     } else {
-        applyBackgroundToWindow(this, type, region);
+        applyBackgroundToWindow(this, type, region, tintedBlur);
     }
     Q_EMIT backgroundColorChanged();
     Q_EMIT backgroundStyleTypeChanged();

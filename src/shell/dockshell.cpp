@@ -134,6 +134,20 @@ void DockShell::connectSettingsSignals()
     connect(s, &KremaSettings::FloatingMarginChanged, m_view.get(), &DockView::refreshFloatingPadding);
     connect(s, &KremaSettings::FloatingMarginReferenceChanged, m_view.get(), &DockView::applyMarginReference);
 
+    // Maximized margin and panel padding are global-only. The margin only
+    // widens the screen-space reservation; the paddings resize the panel
+    // bar and its surface. Both must also move an open preview, whose
+    // anchor compensates for the native reservation behind it.
+    connect(s, &KremaSettings::MaximizedMarginChanged, this, [this]() {
+        m_view->updateSize();
+        m_view->update();
+        m_previewController->updateEdge();
+    });
+    connect(s, &KremaSettings::PanelPaddingTopChanged, m_view.get(), &DockView::updateSize);
+    connect(s, &KremaSettings::PanelPaddingRightChanged, m_view.get(), &DockView::updateSize);
+    connect(s, &KremaSettings::PanelPaddingBottomChanged, m_view.get(), &DockView::updateSize);
+    connect(s, &KremaSettings::PanelPaddingLeftChanged, m_view.get(), &DockView::updateSize);
+
     // Screen-space reservation is global; reflow both the dock and open preview.
     connect(s, &KremaSettings::ReserveScreenSpaceChanged, this, [this]() {
         m_view->updateSize();
@@ -158,6 +172,7 @@ void DockShell::connectSettingsSignals()
     connect(ss, &ScreenSettings::backgroundStyleChanged, m_view.get(), &DockView::applyBackgroundStyle);
     // Tint/accent/system colors are global-only (not per-screen overrideable)
     connect(s, &KremaSettings::TintColorChanged, m_view.get(), &DockView::applyBackgroundStyle);
+    connect(s, &KremaSettings::TintedBlurChanged, m_view.get(), &DockView::applyBackgroundStyle);
     connect(s, &KremaSettings::UseAccentColorChanged, m_view.get(), &DockView::applyBackgroundStyle);
     connect(s, &KremaSettings::UseSystemColorChanged, m_view.get(), &DockView::applyBackgroundStyle);
 

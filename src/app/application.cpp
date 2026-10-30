@@ -86,9 +86,18 @@ void Application::connectSettingsAutoSave(KremaSettings *settings, QObject *cont
     connect(settings, &KremaSettings::FloatingChanged, context, saveSettings);
     connect(settings, &KremaSettings::FloatingMarginChanged, context, saveSettings);
     connect(settings, &KremaSettings::FloatingMarginReferenceChanged, context, saveSettings);
+    connect(settings, &KremaSettings::MaximizedMarginChanged, context, saveSettings);
+    connect(settings, &KremaSettings::PanelPaddingTopChanged, context, saveSettings);
+    connect(settings, &KremaSettings::PanelPaddingRightChanged, context, saveSettings);
+    connect(settings, &KremaSettings::PanelPaddingBottomChanged, context, saveSettings);
+    connect(settings, &KremaSettings::PanelPaddingLeftChanged, context, saveSettings);
     connect(settings, &KremaSettings::BackgroundOpacityChanged, context, saveSettings);
     connect(settings, &KremaSettings::BackgroundStyleChanged, context, saveSettings);
     connect(settings, &KremaSettings::TintColorChanged, context, saveSettings);
+    connect(settings, &KremaSettings::TintedBlurChanged, context, saveSettings);
+    connect(settings, &KremaSettings::UseCustomIndicatorColorsChanged, context, saveSettings);
+    connect(settings, &KremaSettings::IndicatorActiveColorChanged, context, saveSettings);
+    connect(settings, &KremaSettings::IndicatorInactiveColorChanged, context, saveSettings);
     connect(settings, &KremaSettings::VisibilityModeChanged, context, saveSettings);
     connect(settings, &KremaSettings::EdgeChanged, context, saveSettings);
     connect(settings, &KremaSettings::ShowDelayChanged, context, saveSettings);
