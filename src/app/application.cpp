@@ -25,8 +25,12 @@
 #include <KSharedConfig>
 
 #include <QAction>
+#include <QCoreApplication>
+#include <QDir>
+#include <QFile>
 #include <QIcon>
 #include <QLoggingCategory>
+#include <QStandardPaths>
 #include <QQuickStyle>
 #include <QtQml>
 
@@ -65,11 +69,61 @@ KAboutData Application::makeAboutData()
     return aboutData;
 }
 
+namespace
+{
+
+// Keeps the per-user XDG autostart entry in step with the AutoStart
+// setting. Krema installs a system-wide entry (see
+// com.bhyoo.krema.autostart.desktop.in); per the XDG autostart spec a
+// same-named file in the user's autostart directory overrides it, and
+// Hidden=true disables autostart for this user. When enabling, write a
+// full entry rather than deleting the override, so autostart also works
+// for installs that never shipped the system-wide file.
+void syncAutoStartEntry(bool enabled)
+{
+    const QString autostartDir = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)
+        + QStringLiteral("/autostart");
+    const QString filePath = autostartDir + QStringLiteral("/com.bhyoo.krema.autostart.desktop");
+
+    QString content = QStringLiteral("[Desktop Entry]\n"
+                                     "Type=Application\n"
+                                     "Name=Krema\n"
+                                     "Comment=Start Krema dock automatically at login\n"
+                                     "Exec=%1\n"
+                                     "Icon=com.bhyoo.krema\n"
+                                     "Terminal=false\n"
+                                     "OnlyShowIn=KDE;\n"
+                                     "X-GNOME-Autostart-enabled=true\n")
+                            .arg(QCoreApplication::applicationFilePath());
+    if (!enabled) {
+        content += QStringLiteral("Hidden=true\n");
+    }
+    const QByteArray bytes = content.toUtf8();
+
+    // Only touch the file when it is out of step, so ordinary startups
+    // (setting enabled, entry already matching) stay write-free.
+    QFile existing(filePath);
+    if (existing.open(QIODevice::ReadOnly) && existing.readAll() == bytes) {
+        return;
+    }
+    QDir().mkpath(autostartDir);
+    QFile file(filePath);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        file.write(bytes);
+    }
+}
+
+} // namespace
+
 void Application::connectSettingsAutoSave(KremaSettings *settings, QObject *context)
 {
     auto saveSettings = [settings]() {
         settings->save();
     };
+    connect(settings, &KremaSettings::AutoStartChanged, context, saveSettings);
+    connect(settings, &KremaSettings::AutoStartChanged, context, [settings]() {
+        syncAutoStartEntry(settings->autoStart());
+    });
     connect(settings, &KremaSettings::IconSizeChanged, context, saveSettings);
     connect(settings, &KremaSettings::IconSpacingChanged, context, saveSettings);
     connect(settings, &KremaSettings::IconOpacityActiveChanged, context, saveSettings);
@@ -201,6 +255,7 @@ int Application::run(const KAboutData &aboutData)
     m_settings = std::make_unique<KremaSettings>();
     m_settings->load();
     migrateLegacySettings(m_settings.get());
+    syncAutoStartEntry(m_settings->autoStart());
 
     // Create data model
     m_dockModel = std::make_unique<DockModel>();

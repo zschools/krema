@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Added a "Start at login" switch in the new General section of Behavior settings. Krema already started automatically via a system-wide autostart entry but offered no way to turn that off; the switch now controls a per-user autostart entry, and turning it off disables autostart for the current user only.
 - Added a "Maximized margin" setting (Settings → Layout & Position, below Floating margin). It reserved extra space past the dock itself, so a maximized window stopped that far from the dock. It did not move the dock and applied whether Floating was on or off.
 - Added per-side "Panel padding" settings (top, right, bottom, left; Settings → Layout & Position, below Maximized margin) that set the space between the dock background and the icon row on each side independently.
 - Added a "Glass effect" switch for the Tinted panel style (Settings → Panel Style, above Opacity). When on, the compositor blurred what was behind the dock through the tint color, giving the tinted background a frosted-glass look. The backdrop colors were boosted in saturation and the panel gained a specular rim highlight along its edges with a soft sheen, approximating the liquid glass look; true refraction was not possible from the dock side, because on Wayland only the compositor can process what is behind a window.

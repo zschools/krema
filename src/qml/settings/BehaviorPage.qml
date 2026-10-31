@@ -507,6 +507,20 @@ SettingsPage {
         }
     }
 
+    // --- General ---
+    FormCard.FormHeader {
+        title: i18n("General")
+    }
+
+    FormCard.FormCard {
+        FormCard.FormSwitchDelegate {
+            text: i18n("Start at login")
+            description: i18n("Launch Krema automatically when you log in")
+            checked: DockSettings.autoStart
+            onToggled: DockSettings.autoStart = checked
+        }
+    }
+
     // --- Visibility ---
     FormCard.FormHeader {
         title: i18n("Visibility")

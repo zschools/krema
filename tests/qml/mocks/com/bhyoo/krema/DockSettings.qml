@@ -36,6 +36,7 @@ QtObject {
     // Floating gap reference: 0 = Screen edge, 1 = Panels (always-visible, space-reserving panels)
     property int floatingMarginReference: 1
     property bool reserveScreenSpace: true
+    property bool autoStart: true
     property bool separateLaunchers: false
     property int attentionAnimation: 2
     property int attentionAnimationDuration: 5
@@ -60,7 +61,7 @@ QtObject {
     property real shadowIntensity: 0.3
 
     // Restores every property listed in _resettable to its declared value.
-    readonly property var _resettable: ["iconSize", "iconSpacing", "maxZoomFactor", "zoomStyle", "zoomAnimationPreset", "zoomInDuration", "zoomOutDuration", "zoomInEasing", "zoomOutEasing", "iconOpacityActive", "iconOpacityInactive", "iconOpacityMinimized", "iconScale", "cornerRadius", "maximizedMargin", "panelPaddingTop", "panelPaddingRight", "panelPaddingBottom", "panelPaddingLeft", "tintedBlur", "tintedGlassIntensity", "useCustomIndicatorColors", "indicatorActiveColor", "indicatorInactiveColor", "floatingMarginReference", "reserveScreenSpace", "separateLaunchers", "attentionAnimation", "attentionAnimationDuration", "badgeDisplayMode", "badgePosition", "badgeUseAccentColor", "badgeCustomColor", "otherDesktopOpacity", "previewEnabled", "previewHoverDelay", "singleWindowClickAction", "groupedWindowClickAction", "windowTitleMaxLength", "previewThumbnailSize", "shadowEnabled", "shadowElevation", "shadowLightX", "shadowLightY", "shadowLightZ", "shadowLightRadius", "shadowColor", "shadowIntensity"]
+    readonly property var _resettable: ["iconSize", "iconSpacing", "maxZoomFactor", "zoomStyle", "zoomAnimationPreset", "zoomInDuration", "zoomOutDuration", "zoomInEasing", "zoomOutEasing", "iconOpacityActive", "iconOpacityInactive", "iconOpacityMinimized", "iconScale", "cornerRadius", "maximizedMargin", "panelPaddingTop", "panelPaddingRight", "panelPaddingBottom", "panelPaddingLeft", "tintedBlur", "tintedGlassIntensity", "useCustomIndicatorColors", "indicatorActiveColor", "indicatorInactiveColor", "floatingMarginReference", "reserveScreenSpace", "autoStart", "separateLaunchers", "attentionAnimation", "attentionAnimationDuration", "badgeDisplayMode", "badgePosition", "badgeUseAccentColor", "badgeCustomColor", "otherDesktopOpacity", "previewEnabled", "previewHoverDelay", "singleWindowClickAction", "groupedWindowClickAction", "windowTitleMaxLength", "previewThumbnailSize", "shadowEnabled", "shadowElevation", "shadowLightX", "shadowLightY", "shadowLightZ", "shadowLightRadius", "shadowColor", "shadowIntensity"]
     property var _defaults: ({})
     Component.onCompleted: {
         for (const k of _resettable) _defaults[k] = this[k]

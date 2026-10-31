@@ -163,6 +163,11 @@
       <max>64</max>
     </entry>
 
+    <entry name="AutoStart" type="Bool">
+      <label>Start Krema automatically at login (per-user XDG autostart entry)</label>
+      <default>true</default>
+    </entry>
+
     <entry name="VisibilityMode" type="Int">
       <label>Dock visibility mode (0=Always, 1=AutoHide, 2=Dodge)</label>
       <default>0</default>
