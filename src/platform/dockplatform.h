@@ -53,6 +53,13 @@ public:
     /// ignore it and retain their -1 no-reservation policy.
     virtual void setExclusiveZone(int zone) = 0;
 
+    /// Re-assert the current reservation after a compositor cycle that can
+    /// silently drop it (screen lock, suspend/resume): every client-side
+    /// flag may still report the reservation applied while the compositor
+    /// no longer honours it. Implementations rebuild the reserving surface
+    /// if re-applying state is not enough.
+    virtual void reassertReservation() {}
+
     /// Measure the dock's distance from the always-visible panels on its edge
     /// instead of the screen edge. While enabled, the dock surface ignores other
     /// surfaces' exclusive zones (it stays at the screen edge and draws the

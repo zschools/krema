@@ -187,6 +187,9 @@ private:
 
 private Q_SLOTS:
     void handleScreenLockChanged(bool active);
+    /// Re-assert the platform reservation now and once more after the
+    /// recovered surfaces settle (see WaylandDockPlatform::reassertReservation).
+    void reassertReservationDeferred();
 
 private:
     std::unique_ptr<DockPlatform> m_platform;

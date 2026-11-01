@@ -15,6 +15,7 @@
 #include <QDBusConnection>
 #include <QLoggingCategory>
 #include <QPainterPath>
+#include <QTimer>
 
 #include <KIconLoader>
 #include <KLocalizedQmlContext>
@@ -507,6 +508,7 @@ void DockView::handleScreenChanged(QScreen *newScreen)
     refreshPanelInset();
     applyBackgroundStyle();
     show();
+    reassertReservationDeferred();
     if (m_visibilityController) {
         m_visibilityController->updateEdgeTriggerStrip();
         m_visibilityController->requestEvaluate();
@@ -548,9 +550,27 @@ void DockView::handleScreenLockChanged(bool active)
     updateSize();
     applyBackgroundStyle();
     show();
+    reassertReservationDeferred();
     if (m_visibilityController) {
         m_visibilityController->requestEvaluate();
     }
+}
+
+void DockView::reassertReservationDeferred()
+{
+    if (!m_platform) {
+        return;
+    }
+    m_platform->reassertReservation();
+    // The surfaces recreated during the recovery may only finish their
+    // initial configure after this handler returns; assert once more
+    // shortly after so a late-finishing surface still ends up with its
+    // reservation in place.
+    QTimer::singleShot(1500, this, [this]() {
+        if (m_platform) {
+            m_platform->reassertReservation();
+        }
+    });
 }
 
 void DockView::applyBackgroundStyle()

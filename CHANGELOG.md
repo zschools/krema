@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fixed maximized windows expanding over the space the dock reserves after the screen was locked or the machine woke from sleep. Across such a cycle the compositor kept the reservation surface mapped but silently dropped its exclusive zone, and nothing restored it until Krema was restarted. The dock now rebuilds its reservation surface when it recovers from an unlock or a screen change, and asserts the reservation once more after the new surfaces settle.
 - Right-clicking another dock icon while a context menu was open only closed that menu, because the menu's popup grab consumed the click. The menu now switches straight to the clicked icon's menu in a single click. Right-clicking the same icon again still just closes its menu.
 - Fixed the first right-click on a dock icon sometimes doing nothing, so the context menu needed a second click. Presses and clicks now resolve the icon from the click position itself with freshly published icon geometry instead of relying on hover state that can lag a re-centring layout or the post-menu reconciliation.
 - Floating gaps used the effective per-screen Floating state and configured global margin. Shadows no longer shifted the requested gap, screen reservation, or preview position; same-edge panel behavior remained unchanged.

@@ -212,24 +212,37 @@ void WaylandDockPlatform::setPanelRelative(bool enabled)
     m_panelRelative = enabled;
 
     if (!enabled) {
-        // Hand the reservation back to the dock surface: clear the probe's
-        // reservation and commit it while its native surface still exists,
-        // even if Qt transiently reports it as unexposed.
-        m_probeResetting = true;
-        if (m_probeLayerWindow) {
-            m_probeLayerWindow->setExclusiveZone(0);
-            commitMappedSurface(m_probe.get());
-        }
-        m_probeMapped = false;
-        m_probeOwnsReservation = false;
-        applyExclusiveZone();
-        m_probeLayerWindow = nullptr;
-        m_probe.reset();
-        m_probeResetting = false;
+        destroyProbe();
         return;
     }
 
-    if (!m_window) {
+    createProbe();
+}
+
+void WaylandDockPlatform::destroyProbe()
+{
+    if (!m_probe) {
+        return;
+    }
+    // Hand the reservation back to the dock surface: clear the probe's
+    // reservation and commit it while its native surface still exists,
+    // even if Qt transiently reports it as unexposed.
+    m_probeResetting = true;
+    if (m_probeLayerWindow) {
+        m_probeLayerWindow->setExclusiveZone(0);
+        commitMappedSurface(m_probe.get());
+    }
+    m_probeMapped = false;
+    m_probeOwnsReservation = false;
+    applyExclusiveZone();
+    m_probeLayerWindow = nullptr;
+    m_probe.reset();
+    m_probeResetting = false;
+}
+
+void WaylandDockPlatform::createProbe()
+{
+    if (!m_window || m_probe) {
         return;
     }
     auto probe = std::make_unique<ProbeWindow>();
@@ -302,6 +315,30 @@ void WaylandDockPlatform::setPanelRelative(bool enabled)
     });
     if (m_window->isVisible()) {
         showProbe();
+    }
+}
+
+void WaylandDockPlatform::reassertReservation()
+{
+    if (m_panelRelative && m_probe) {
+        // Across a lock or suspend cycle the compositor can keep the probe
+        // surface mapped yet silently drop its exclusive zone, while every
+        // client-side flag still reports the reservation applied (a fresh
+        // Krema start, which builds a fresh probe, is unaffected). Re-setting
+        // the same zone on the surviving surface does not revive it, so
+        // rebuild the probe: a new surface gets the zone from scratch, in
+        // the same state the startup path produces.
+        destroyProbe();
+        createProbe();
+        return;
+    }
+    if (m_layerWindow) {
+        // The dock surface carries the reservation itself: push the zone
+        // out again as a changed value, in case the live surface lost it
+        // the same way and an unchanged value would not be re-sent.
+        m_layerWindow->setExclusiveZone(0);
+        commitMappedSurface(m_window);
+        applyExclusiveZone();
     }
 }
 

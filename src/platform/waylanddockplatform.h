@@ -34,6 +34,7 @@ public:
     void setEdge(Edge edge) override;
     void setExclusiveZone(int zone) override;
     void setPanelRelative(bool enabled) override;
+    void reassertReservation() override;
     void setMargin(int margin) override;
     void setVisibilityMode(VisibilityMode mode) override;
     void setSize(const QSize &size) override;
@@ -44,6 +45,8 @@ public:
 private:
     void applyAnchors();
     void applyExclusiveZone();
+    void createProbe();
+    void destroyProbe();
     void showProbe();
 
     LayerShellQt::Window *m_layerWindow = nullptr;
