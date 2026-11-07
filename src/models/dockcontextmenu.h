@@ -14,6 +14,8 @@ class QWindow;
 // forward-declare it there, not inside krema (same as screensettings.h).
 class KremaSettings;
 
+class QMenu;
+
 namespace krema
 {
 
@@ -22,7 +24,7 @@ class DockActions;
 class NotificationTracker;
 
 /**
- * Context menu for dock items.
+ * Context menus for dock items and empty dock space.
  *
  * Separated from DockModel to isolate UI-level menu construction
  * and its associated signals (settings, about, visibility tracking).
@@ -45,6 +47,9 @@ public:
     /// The dock window this menu belongs to. Used to recognise a
     /// right-click that lands on the dock while the menu is open.
     void setDockWindow(QWindow *window);
+
+    /// Show dock-wide actions from empty dock space, including Quit Krema.
+    Q_INVOKABLE void showForDock();
 
     [[nodiscard]] bool isOpen() const;
 
@@ -75,6 +80,7 @@ private:
     QPointF m_switchPoint;
 
     void setOpen(bool open);
+    void popup(QMenu *menu);
 };
 
 } // namespace krema

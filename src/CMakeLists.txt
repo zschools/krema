@@ -48,6 +48,8 @@ add_library(krema_lib STATIC
 
     models/dockmodel.h
     models/dockmodel.cpp
+    models/taskbackend.h
+    models/taskbackend.cpp
     models/dockactions.h
     models/dockactions.cpp
     models/dockcontextmenu.h
@@ -93,6 +95,7 @@ target_link_libraries(krema_lib PUBLIC
     Qt6::Gui
     Qt6::Widgets
     Qt6::DBus
+    Qt6::Qml
     Qt6::Quick
     Qt6::QuickControls2
     Qt6::WaylandClient
@@ -111,8 +114,6 @@ target_link_libraries(krema_lib PUBLIC
     KF6::KIOGui
     KF6::JobWidgets
     LayerShellQt::Interface
-    PW::LibTaskManager
-    PW::LibNotificationManager
     Wayland::Client
 )
 target_link_libraries(krema_lib PRIVATE Qt6::GuiPrivate)

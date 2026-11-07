@@ -9,9 +9,6 @@
 #include "krema.h"
 #include "notificationtracker.h"
 
-#include <taskmanager/abstracttasksmodel.h>
-#include <taskmanager/tasksmodel.h>
-
 #include <KLocalizedString>
 
 #include <QApplication>
@@ -35,13 +32,13 @@ DockContextMenu::DockContextMenu(DockModel *model, DockActions *actions, Notific
 
 void DockContextMenu::showForTask(int index)
 {
-    auto *tasksModel = m_model->tasksModel();
-    const QModelIndex idx = tasksModel->index(index, 0);
+    const auto tasksModel = m_model->tasks();
+    const QModelIndex idx = tasksModel.index(index, 0);
     if (!idx.isValid()) {
         return;
     }
 
-    const bool isWindow = idx.data(TaskManager::AbstractTasksModel::IsWindow).toBool();
+    const bool isWindow = idx.data(tasks::roles().IsWindow).toBool();
 
     const bool pinned = m_model->isPinned(index);
 
@@ -55,7 +52,7 @@ void DockContextMenu::showForTask(int index)
     // Each action is captured by value together with its KService, so it
     // launches the right application even if task rows change while the menu
     // is open.
-    const QList<KServiceAction> appActions = desktopActions(idx.data(TaskManager::AbstractTasksModel::LauncherUrlWithoutIcon).toUrl());
+    const QList<KServiceAction> appActions = desktopActions(idx.data(tasks::roles().LauncherUrlWithoutIcon).toUrl());
     if (!appActions.isEmpty()) {
         for (const KServiceAction &action : appActions) {
             if (action.isSeparator()) {
@@ -106,9 +103,6 @@ void DockContextMenu::showForTask(int index)
         Q_EMIT aboutRequested();
     });
     menu->addAction(QIcon::fromTheme(QStringLiteral("application-exit")), i18nc("@action:inmenu", "Quit"), qApp, &QApplication::quit);
-
-    // Settings
-    menu->addSeparator();
     menu->addAction(QIcon::fromTheme(QStringLiteral("configure")), i18nc("@action:inmenu", "Settings..."), this, [this]() {
         Q_EMIT settingsRequested();
     });
@@ -118,11 +112,11 @@ void DockContextMenu::showForTask(int index)
     // entry raises that window, and the close action becomes Close All.
     if (isWindow) {
         menu->addSeparator();
-        const int childCount = tasksModel->rowCount(idx);
+        const int childCount = tasksModel.rowCount(idx);
         if (childCount > 1) {
             const int maxLength = m_settings != nullptr ? m_settings->windowTitleMaxLength() : 60;
             for (int child = 0; child < childCount; ++child) {
-                const QModelIndex childIdx = tasksModel->index(child, 0, idx);
+                const QModelIndex childIdx = tasksModel.index(child, 0, idx);
                 QString title = childIdx.data(Qt::DisplayRole).toString();
                 if (maxLength > 0 && title.length() > maxLength) {
                     title = title.left(maxLength) + QStringLiteral("…");
@@ -144,7 +138,34 @@ void DockContextMenu::showForTask(int index)
 
     m_currentIndex = index;
     m_switchArmed = false;
+    popup(menu);
+}
 
+void DockContextMenu::showForDock()
+{
+    auto *menu = new QMenu();
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+    menu->addAction(QIcon::fromTheme(QStringLiteral("configure")), i18nc("@action:inmenu", "Settings..."), this, [this]() {
+        Q_EMIT settingsRequested();
+    });
+
+    // Standard KDE actions
+    menu->addSeparator();
+    menu->addAction(QIcon::fromTheme(QStringLiteral("help-about")), i18nc("@action:inmenu", "About Krema"), this, [this]() {
+        Q_EMIT aboutRequested();
+    });
+    menu->addSeparator();
+    menu->addAction(QIcon::fromTheme(QStringLiteral("application-exit")), i18nc("@action:inmenu", "Quit Krema"), qApp, &QApplication::quit);
+
+    // No task is attached to this menu: a right-click switch out of it
+    // must never resolve to a task index.
+    m_currentIndex = -1;
+    m_switchArmed = false;
+    popup(menu);
+}
+
+void DockContextMenu::popup(QMenu *menu)
+{
     // Open before popup(): the popup grab makes QtWayland send the dock a
     // synthetic leave, which QML must already see as part of the menu hold.
     // Also drives the interaction lock (dock stays visible while menu is open).

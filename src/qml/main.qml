@@ -21,6 +21,7 @@ Item {
 
     Accessible.role: Accessible.ToolBar
     Accessible.name: i18n("Krema Dock")
+    Accessible.description: i18n("Press Menu for application actions or Shift+F10 for dock settings and actions.")
 
     // C++ singletons: DockView, DockModel, DockActions, DockContextMenu, DockVisibility, DockSettings, PreviewController
 
@@ -136,8 +137,12 @@ Item {
     // the dock, so refresh the published geometry synchronously and hit-test
     // the event's own coordinates; the first click then acts on the item
     // actually under the pointer instead of being swallowed.
-    function resolvePointerAt(x, y) {
-        if (_menuHeld || keyboardNavigating) return
+    function resolvePointerAt(x, y, pointerOverride = false) {
+        if (_menuHeld) return
+        // Keyboard navigation keeps its focused item as the target, except
+        // for an explicit pointer action (a right-click, a menu switch):
+        // a background right-click must not be stolen by the focused task.
+        if (keyboardNavigating && !pointerOverride) return
         _pointerOnDock = true
         for (let i = 0; i < dockRepeater.count; ++i) {
             let item = dockRepeater.itemAt(i)
@@ -395,10 +400,18 @@ Item {
             event.accepted = true
             break
         case Qt.Key_Menu:
-            if (hoveredIndex >= 0) {
+            if (hoveredIndex >= 0 && !(event.modifiers & Qt.ShiftModifier)) {
                 DockContextMenu.showForTask(hoveredIndex)
+            } else {
+                DockContextMenu.showForDock()
             }
             event.accepted = true
+            break
+        case Qt.Key_F10:
+            if (event.modifiers & Qt.ShiftModifier) {
+                DockContextMenu.showForDock()
+                event.accepted = true
+            }
             break
         }
     }
@@ -836,7 +849,7 @@ Item {
         // one click switches menus. Clicking the same icon again only
         // closes its menu, as before.
         function onSwitchRequested(localX, localY, previousIndex) {
-            root.resolvePointerAt(localX, localY)
+            root.resolvePointerAt(localX, localY, true)
             if (root.hoveredIndex >= 0 && root.hoveredIndex !== previousIndex)
                 DockContextMenu.showForTask(root.hoveredIndex)
         }
@@ -921,7 +934,7 @@ Item {
                 root._pointerRootX = mouse.x
                 root._pointerRootY = mouse.y
             }
-            root.resolvePointerAt(mouse.x, mouse.y)
+            root.resolvePointerAt(mouse.x, mouse.y, mouse.button === Qt.RightButton)
             if (mouse.button === Qt.LeftButton && root.hoveredIndex >= 0) {
                 root._dragStartX = mouse.x
                 root._dragStartY = mouse.y
@@ -963,7 +976,14 @@ Item {
             // the release (a layout refresh landing in between), so resolve
             // the target from the click position itself.
             if (!root._menuHeld)
-                root.resolvePointerAt(mouse.x, mouse.y)
+                root.resolvePointerAt(mouse.x, mouse.y, mouse.button === Qt.RightButton)
+            if (mouse.button === Qt.RightButton) {
+                if (root.hoveredIndex >= 0)
+                    DockContextMenu.showForTask(root.hoveredIndex)
+                else
+                    DockContextMenu.showForDock()
+                return
+            }
             if (root.hoveredIndex < 0) return
             if (mouse.button === Qt.LeftButton) {
                 let idx = DockModel.tasksModel.index(root.hoveredIndex, 0)
@@ -985,8 +1005,6 @@ Item {
                 }
             } else if (mouse.button === Qt.MiddleButton) {
                 DockActions.newInstance(root.hoveredIndex)
-            } else if (mouse.button === Qt.RightButton) {
-                DockContextMenu.showForTask(root.hoveredIndex)
             }
         }
 

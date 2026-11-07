@@ -16,6 +16,7 @@
 #include "shell/dockshell.h"
 #include "shell/dockview.h"
 #include "shell/dockvisibilitycontroller.h"
+#include "shell/previewcontroller.h"
 #include "shell/edgetrigger.h"
 #include "shell/multidockmanager.h"
 #include "shell/outputordermonitor.h"
@@ -26,13 +27,18 @@
 
 #include <KAboutData>
 
+#include <QAccessible>
 #include <QApplication>
+#include <QFile>
+#include <QMenu>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickStyle>
 #include <QQuickWindow>
+#include <QScopeGuard>
 #include <QScreen>
 #include <QSet>
+#include <QTemporaryDir>
 #include <QTest>
 #include <QtQml>
 
@@ -714,6 +720,12 @@ TEST_CASE("Settings reopen cleanly after being closed", "[settings][reopen-after
 
     // QA-06: Escape closes the dialog, releases the lock and destroys the
     // window instead of leaving a hidden one behind
+    REQUIRE(QTest::qWaitFor(
+        [] {
+            auto *dialog = settingsWindow();
+            return dialog && dialog->isActive();
+        },
+        kTimeoutMs));
     QTest::keyClick(settingsWindow(), Qt::Key_Escape);
     CHECK(QTest::qWaitFor(allDocksHidden, kTimeoutMs));
     CHECK(QTest::qWaitFor(
@@ -772,8 +784,27 @@ TEST_CASE("Rebuilding docks releases every dock surface", "[settings][teardown]"
     QCoreApplication::processEvents();
     const auto baseline = QGuiApplication::topLevelWindows().size();
 
-    // QA-07: shells torn down by mode changes leave no surfaces behind and
-    // raise no QML errors while being destroyed.
+    auto *oldShell = app().manager->primaryShell();
+    REQUIRE(oldShell);
+    QPointer<QObject> dockRoot = oldShell->view()->rootObject();
+    QPointer<krema::PreviewController> previewController = oldShell->previewController();
+    REQUIRE(dockRoot);
+    REQUIRE(previewController);
+    bool previewDestroyedAfterRoot = false;
+    QObject::connect(previewController, &QObject::destroyed, oldShell->view(), [&] {
+        previewDestroyedAfterRoot = dockRoot.isNull();
+    }, Qt::DirectConnection);
+    // QA-07: synchronously rebuilding the manager destroys the dock root before
+    // its PreviewController and leaves no QML errors behind.
+    app().manager.reset();
+    startDocks();
+    CHECK(previewDestroyedAfterRoot);
+    CHECK(dockRoot.isNull());
+    CHECK(previewController.isNull());
+    CHECK(QGuiApplication::topLevelWindows().size() == baseline);
+    CHECK(g_qmlErrors.isEmpty());
+
+    // The remaining mode round trip keeps the existing surface-leak coverage.
     app().settings->setMonitorMode(MultiDockManager::AllScreens);
     app().settings->setMonitorMode(MultiDockManager::PrimaryOnly);
     app().settings->setMonitorMode(MultiDockManager::FollowActive);
@@ -914,6 +945,156 @@ TEST_CASE("Every settings page loads without QML warnings", "[settings][pages]")
     CHECK(g_settingsQmlWarnings.isEmpty());
 }
 
+namespace
+{
+
+bool hasAccessibleNamed(QAccessibleInterface *iface, const QString &name, bool requireVisible)
+{
+    if (!iface || !iface->isValid()) {
+        return false;
+    }
+    if (iface->text(QAccessible::Name) == name && (!requireVisible || !iface->state().invisible)) {
+        return true;
+    }
+    const int count = iface->childCount();
+    for (int i = 0; i < count; ++i) {
+        if (hasAccessibleNamed(iface->child(i), name, requireVisible)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool settingsExposesAccessible(QQuickWindow *dialog, const QString &name)
+{
+    return dialog && hasAccessibleNamed(QAccessible::queryAccessibleInterface(dialog), name, false);
+}
+
+bool settingsShowsAccessible(QQuickWindow *dialog, const QString &name)
+{
+    return dialog && hasAccessibleNamed(QAccessible::queryAccessibleInterface(dialog), name, true);
+}
+
+} // namespace
+
+// Regression for Settings Shadow 3D stage teardown UAF: unloading a QtQuick3D
+// View3D through a QQuickLoader while the QQuickWindow stays open clears
+// window() before ~QQuick3DViewport(), scheduling evaluateEol() on the GUI
+// thread and freeing backend material/root nodes while QSGRenderThread still
+// renders the sub-scenegraph. Under MALLOC_PERTURB_=85 this crashes
+// deterministically unless the 3D scene stays window-bound until close.
+TEST_CASE("Shadow 3D stage survives page switches, shadow toggles, and window reopens", "[settings][shadow][lifecycle]")
+{
+    resetTo(MultiDockManager::PrimaryOnly);
+    const bool oldShadow = app().settings->shadowEnabled();
+    const auto restoreShadow = qScopeGuard([oldShadow] {
+        app().settings->setShadowEnabled(oldShadow);
+    });
+    app().settings->setShadowEnabled(false);
+    g_settingsQmlWarnings.clear();
+    g_qmlErrors.clear();
+
+    openSettingsFrom(app().manager->primaryShell());
+    QPointer<QQuickWindow> dialog = settingsWindow();
+    REQUIRE(dialog);
+    auto *loader = dialog->findChild<QQuickItem *>(QStringLiteral("settingsPageLoader"));
+    REQUIRE(loader);
+
+    auto waitPageReady = [&loader] {
+        REQUIRE(QTest::qWaitFor(
+            [&loader] {
+                return loader && loader->property("status").toInt() == 1 /* Loader.Ready */ && loader->property("item").value<QQuickItem *>() != nullptr;
+            },
+            kTimeoutMs));
+    };
+
+    QMetaObject::invokeMethod(dialog, "openModule", Q_ARG(QVariant, QStringLiteral("shadow")));
+    waitPageReady();
+    // ShadowPage also has a collapsed "Advanced settings" Panel elevation
+    // slider (invisible while shadow is off); neither stage handle may be
+    // shown, and the 3D-only Light position handle must not exist at all.
+    CHECK_FALSE(settingsExposesAccessible(dialog, QStringLiteral("Light position")));
+    CHECK_FALSE(settingsShowsAccessible(dialog, QStringLiteral("Panel elevation")));
+
+    app().settings->setShadowEnabled(true);
+    REQUIRE(QTest::qWaitFor(
+        [&dialog] {
+            return settingsShowsAccessible(dialog, QStringLiteral("Light position"))
+                && settingsShowsAccessible(dialog, QStringLiteral("Panel elevation"));
+        },
+        kTimeoutMs));
+    QTest::qWait(80);
+
+    for (int i = 0; i < 12; ++i) {
+        // Unload via stageLoader while staying on the Shadow page.
+        app().settings->setShadowEnabled(false);
+        QTest::qWait(45);
+        CHECK_FALSE(settingsExposesAccessible(dialog, QStringLiteral("Light position")));
+        CHECK_FALSE(settingsShowsAccessible(dialog, QStringLiteral("Panel elevation")));
+
+        // Reload stageLoader, then unload ShadowPage via contentLoader.
+        app().settings->setShadowEnabled(true);
+        REQUIRE(QTest::qWaitFor(
+            [&dialog] {
+                return settingsExposesAccessible(dialog, QStringLiteral("Light position"));
+            },
+            kTimeoutMs));
+        QTest::qWait(45);
+
+        QMetaObject::invokeMethod(dialog, "openModule", Q_ARG(QVariant, QStringLiteral("layout")));
+        waitPageReady();
+        QTest::qWait(45);
+        CHECK_FALSE(settingsExposesAccessible(dialog, QStringLiteral("Light position")));
+        CHECK_FALSE(settingsExposesAccessible(dialog, QStringLiteral("Panel elevation")));
+
+        QMetaObject::invokeMethod(dialog, "openModule", Q_ARG(QVariant, QStringLiteral("shadow")));
+        waitPageReady();
+        REQUIRE(QTest::qWaitFor(
+            [&dialog] {
+            return settingsShowsAccessible(dialog, QStringLiteral("Light position"))
+                && settingsShowsAccessible(dialog, QStringLiteral("Panel elevation"));
+            },
+            kTimeoutMs));
+        QTest::qWait(45);
+    }
+
+    CHECK(g_settingsQmlWarnings.isEmpty());
+    CHECK(g_qmlErrors.isEmpty());
+
+    closeSettings();
+    REQUIRE(QTest::qWaitFor(
+        [] {
+            return settingsWindowObjectCount() == 0;
+        },
+        kTimeoutMs));
+
+    // Reopen directly with shadow enabled, disable it, and close cleanly.
+    openSettingsFrom(app().manager->primaryShell());
+    dialog = settingsWindow();
+    REQUIRE(dialog);
+    loader = dialog->findChild<QQuickItem *>(QStringLiteral("settingsPageLoader"));
+    REQUIRE(loader);
+    QMetaObject::invokeMethod(dialog, "openModule", Q_ARG(QVariant, QStringLiteral("shadow")));
+    waitPageReady();
+    REQUIRE(QTest::qWaitFor(
+        [&dialog] {
+            return settingsExposesAccessible(dialog, QStringLiteral("Light position"));
+        },
+        kTimeoutMs));
+    QTest::qWait(60);
+    app().settings->setShadowEnabled(false);
+    QTest::qWait(60);
+    closeSettings();
+    REQUIRE(QTest::qWaitFor(
+        [] {
+            return settingsWindowObjectCount() == 0;
+        },
+        kTimeoutMs));
+    CHECK(g_settingsQmlWarnings.isEmpty());
+    CHECK(g_qmlErrors.isEmpty());
+}
+
+
 // The settings miniatures lay out Parabolic zoom with the dock's own
 // computeDockZoom, which splits the growth between both ends: with the
 // pointer in the middle of the row the panel background stays put. Pinning
@@ -1044,6 +1225,111 @@ TEST_CASE("Shutting down right after reopening settings", "[settings][shutdown-a
     app().manager.reset();
     CHECK_FALSE(closed);
     checkSettingsTornDown(reopened);
+}
+
+TEST_CASE("Dock-wide actions are only available from empty dock space", "[context-menu]")
+{
+    resetTo(MultiDockManager::PrimaryOnly);
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    QFile desktop(directory.filePath(QStringLiteral("krema-context-test.desktop")));
+    REQUIRE(desktop.open(QIODevice::WriteOnly));
+    REQUIRE(desktop.write("[Desktop Entry]\nType=Application\nName=Context Menu Test\nExec=true\nIcon=application-x-executable\n") > 0);
+    desktop.close();
+    const auto oldLaunchers = app().model->pinnedLaunchers();
+    const auto oldVisibility = app().settings->visibilityMode();
+    const auto oldZoom = app().settings->maxZoomFactor();
+    const auto restore = qScopeGuard([&] {
+        app().model->setPinnedLaunchers(oldLaunchers);
+        app().settings->setVisibilityMode(oldVisibility);
+        app().settings->setMaxZoomFactor(oldZoom);
+    });
+    app().settings->setVisibilityMode(0);
+    app().settings->setMaxZoomFactor(1.0);
+    app().model->setPinnedLaunchers({QUrl::fromLocalFile(desktop.fileName()).toString()});
+    restartDocks();
+    auto *shell = app().manager->primaryShell();
+    auto *view = shell->view();
+    REQUIRE(QTest::qWaitForWindowExposed(view));
+    auto *item = findItem(view->contentItem(), [](QQuickItem *candidate) {
+        return candidate->property("displayName").isValid() && candidate->property("index").toInt() == 0;
+    });
+    REQUIRE(item);
+    REQUIRE(QTest::qWaitFor(
+        [&] {
+            return item->width() > 0 && item->height() > 0;
+        },
+        kTimeoutMs));
+
+    // QtTest exercises QML routing but supplies no compositor input serial
+    // for a Wayland popup grab. Inspect native labels before popup() instead.
+    QStringList labels;
+    bool interactionHeld = false;
+    const auto connection = QObject::connect(shell->contextMenu(), &krema::DockContextMenu::openChanged, view, [&] {
+        if (!shell->contextMenu()->isOpen()) {
+            return;
+        }
+        interactionHeld = view->visibilityController()->isInteracting();
+        labels.clear();
+        for (auto *widget : QApplication::topLevelWidgets()) {
+            if (auto *menu = qobject_cast<QMenu *>(widget); menu && !menu->isVisible()) {
+                for (auto *action : menu->actions()) {
+                    if (!action->isSeparator()) {
+                        labels.append(action->text());
+                    }
+                }
+            }
+        }
+    });
+    const auto disconnect = qScopeGuard([&] {
+        QObject::disconnect(connection);
+    });
+    QTest::mouseClick(view, Qt::RightButton, Qt::NoModifier, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
+    CHECK(labels.contains(QStringLiteral("Unpin from Dock")));
+    // Fork deviation from upstream's menu split: the application menu
+    // keeps About Krema, Quit, and Settings... above its close actions,
+    // while the empty-area dock menu offers the same entries as upstream.
+    CHECK(labels.contains(QStringLiteral("Quit")));
+    CHECK_FALSE(labels.contains(QStringLiteral("Quit Krema")));
+    CHECK(labels.contains(QStringLiteral("Settings...")));
+    CHECK(labels.contains(QStringLiteral("About Krema")));
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+    auto *panel = findItem(view->contentItem(), [](QQuickItem *candidate) {
+        return candidate->property("restEdgePos").isValid();
+    });
+    REQUIRE(panel);
+    QTest::mouseClick(view, Qt::RightButton, Qt::NoModifier, panel->mapToScene(QPointF(2, 2)).toPoint());
+    CHECK(labels == QStringList{QStringLiteral("Settings..."), QStringLiteral("About Krema"), QStringLiteral("Quit Krema")});
+    CHECK(interactionHeld);
+}
+
+TEST_CASE("An idle empty dock receives compositor keyboard focus", "[context-menu][keyboard]")
+{
+    resetTo(MultiDockManager::PrimaryOnly);
+    const auto oldLaunchers = app().model->pinnedLaunchers();
+    const auto oldVisibility = app().settings->visibilityMode();
+    const auto restore = qScopeGuard([&] {
+        app().model->setPinnedLaunchers(oldLaunchers);
+        app().settings->setVisibilityMode(oldVisibility);
+    });
+    app().model->setPinnedLaunchers({});
+    app().settings->setVisibilityMode(0);
+    restartDocks();
+    auto *shell = app().manager->primaryShell();
+    auto *view = shell->view();
+    REQUIRE(QTest::qWaitForWindowExposed(view));
+    // Let startup rendering settle: no icon animation may commit focus for us.
+    QTest::qWait(200);
+    shell->focusDock();
+    REQUIRE(QTest::qWaitFor(
+        [&] {
+            return view->isActive();
+        },
+        kTimeoutMs));
+    REQUIRE(view->rootObject()->property("keyboardNavigating").toBool());
+    REQUIRE(view->rootObject()->hasActiveFocus());
+    QTest::keyClick(view, Qt::Key_Escape);
 }
 
 int main(int argc, char *argv[])

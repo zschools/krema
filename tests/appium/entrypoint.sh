@@ -31,11 +31,10 @@ if [ "${1:-}" = "--inner" ]; then
     # Like Plasma, which starts kactivitymanagerd as a session service
     # (plasma-kactivitymanagerd.service, with the session's environment), run
     # it inside the kwin session when it is installed (Tier 3: krema's
-    # plasma-workspace dependency pulls it in). Otherwise krema's
-    # TaskManager::ActivityInfo D-Bus-activates it on every start from the
-    # bus's environment, which has no WAYLAND_DISPLAY: it tries xcb and
-    # aborts (SIGABRT), once per krema start, each crash handed to the host's
-    # core handler (apport on the CI runners).
+    # plasma-workspace dependency pulls it in). Otherwise the activity service
+    # is D-Bus activated on every start from the bus environment, which has no
+    # WAYLAND_DISPLAY: it tries xcb and aborts (SIGABRT), once per krema start,
+    # each crash handed to the host's core handler (apport on the CI runners).
     for d in $(echo "${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" | tr ':' ' '); do
         f="$d/dbus-1/services/org.kde.ActivityManager.service"
         [ -f "$f" ] || continue
@@ -108,6 +107,18 @@ else
     export KREMA_E2E_TESTS_DIR=/work/tests/appium
 fi
 export KREMA_E2E_BINARY
+
+if [ "${KREMA_E2E_LIST_MULTI_OUTPUTS:-0}" = "1" ]; then
+    cd "$KREMA_E2E_TESTS_DIR"
+    rc=0
+    python3 -m pytest -p no:cacheprovider \
+        --list-multi-outputs /artifacts/multi-outputs.txt "$@" >>/artifacts/pytest.log 2>&1 || rc=$?
+    if [ "$rc" -ne 0 ] && [ "$rc" -ne 5 ]; then
+        cat /artifacts/pytest.log >&2
+        exit "$rc"
+    fi
+    exit 0
+fi
 
 if [ "${1:-}" = "--shell" ]; then
     exec bash

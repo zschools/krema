@@ -40,7 +40,12 @@ DockShell::DockShell(KremaSettings *globalSettings,
     m_contextMenu->setDockWindow(m_view.get());
 }
 
-DockShell::~DockShell() = default;
+DockShell::~DockShell()
+{
+    // Shell-owned context properties must outlive the QML root; PreviewController
+    // remains before DockView in destruction order because its preview shares the engine.
+    m_view->setSource(QUrl{});
+}
 
 void DockShell::initialize(DockPlatform::Edge edge, DockPlatform::VisibilityMode visibilityMode)
 {
@@ -113,6 +118,9 @@ void DockShell::focusDock()
     if (rootObj) {
         QMetaObject::invokeMethod(rootObj, "startKeyboardNavigation", Qt::AutoConnection);
     }
+    // An empty dock has no icon focus/zoom change to schedule a frame. Commit
+    // the layer-shell keyboard-interactivity change even in that case.
+    m_view->update();
 }
 
 void DockShell::connectSettingsSignals()

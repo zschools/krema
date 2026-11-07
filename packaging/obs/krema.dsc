@@ -1,6 +1,6 @@
 Format: 1.0
 Source: krema
-Version: 0.12.0-1
+Version: 0.13.0-1
 Binary: krema
 Maintainer: Byeonghoon Yoo <bhyoo@bhyoo.com>
 Architecture: any
@@ -28,13 +28,11 @@ Build-Depends: debhelper-compat (= 13),
                libkf6service-dev (>= 6.0.0),
                libkf6kio-dev (>= 6.0.0),
                libkf6jobwidgets-dev (>= 6.0.0),
-               libkf6itemmodels-dev (>= 6.0.0),
                libkirigami-dev (>= 6.0.0),
                kirigami-addons-dev,
                liblayershellqtinterface-dev (>= 6.0.0),
-               plasma-workspace-dev,
                libkpipewire-dev,
                libwayland-dev (>= 1.22)
-DEBTRANSFORM-TAR: krema-0.12.0.tar.gz
+DEBTRANSFORM-TAR: krema-0.13.0.tar.gz
 Files:
- 00000000000000000000000000000000 0 krema-0.12.0.tar.gz
+ 00000000000000000000000000000000 0 krema-0.13.0.tar.gz
